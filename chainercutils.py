@@ -1,8 +1,5 @@
-'''
-Created on Dec 2, 2017
 
-@author: ARL
-'''
+##taken from chainer
 ###conv utils
 
 import numpy
