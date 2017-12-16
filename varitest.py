@@ -1,8 +1,3 @@
-'''
-Created on Dec 4, 2017
-
-@author: ARL
-'''
 
 import chainercutils as cul
 import numpy as np
