@@ -7,12 +7,8 @@ import os
 os.environ['PYTHONPATH'] =r'C:\Users\utilisateur\Anaconda\envs\tensorflow'
 os.environ['PATH']='C:\\Users\\utilisateur\\Anaconda\\envs\\tensorflow\\;C:\\Program Files (x86)\\Graphviz2.38\\bin\\'
 import numpy as np
-import mxnet as mx
-import mxnet.ndarray as mnd
-import cntk as C
 import itertools
 import varitest as VT
-import cntk.ops as CO
 import tensorflow as tf
 def indary(input):
     ishp=input.shape
@@ -117,69 +113,15 @@ baseline=im2col_cpuV2(inputest, window[0], window[1], step[0], step[1], pad[0], 
         out_h=outh, out_w=outw,og=0,channel1=0)
 
 #numpy https://docs.scipy.org/doc/numpy/reference/routines.array-manipulation.html
-#broadcast, tile, split ??block?
 #print(np.broadcast_to(inputest,baseline.shape))
 print(np.split(inputest,3,1)[0].shape)
 print(np.repeat(inputest, repeats=(0,3,3), axis=1).shape)#(1,2,3)))
 
 
-#mxnet https://mxnet.incubator.apache.org/tutorials/basic/ndarray.html
-
-mna=mnd.array(inputest,  dtype=np.float32)
-print(mna.shape)
-mnind=mna[:,:,0:6,0:6]
-mne=mnd.array(np.empty((1,3,6,6,3,3),dtype=np.float32))
-"""
-print('mne',mne.shape)
-for R in range(window[0]):
-    print('R',R)
-    jdy = R * 1 #window index * dilation
-    j_lim = jdy + 1 * mna.shape[-2]-2
-    for H in range(window[1]):
-        print('H',H)
-        idx = H * 1 #window index * dilation
-        i_lim = idx + 1 * mna.shape[-1]-2
-        mne[:,:,:,:,R,H]=mna[:, :, jdy:j_lim:1, idx:i_lim:1]
-print(mne,mne.shape)"""
-#mng=mnd.gather_nd(mna,)
-#mns=mnd.scatter_nd()
-#mnb=mna.broadcast_to((numimg,outh,outw,1,shape[0],*window))
-#mnd.take(mna)
-print(mnind,mnind.shape)
-
-#print(mnb.shape)
-#print(mnb.asnumpy()==baseline)
-
-
-
-
-#cntk https://www.cntk.ai/pythondocs/cntk.ops.sequence.html
-#class cntktest(C.layers.layers):
-#    def __init__(self,cell,data,kern=(3,3),step=(1,1),pad=(0,0)):
-#        self.out=cell
-#        self.outh=get_conv_outsize(data[-2], kern[-2], step[-2], pad[-2])
-#        self.outw=get_conv_outsize(data[-1], kern[-1], step[-1], pad[-1])
-#C.input_variable(shape, dtype, needs_gradient, is_sparse, dynamic_axes, name)
-cna=CO.element_times(inputest, 1, name='cnin')
-#cwd=C.layers.layers._window(cna,axis=-1,begin=0,end=8,step=1,stride=3)
-                      #axis=-filter_rank, begin=-lpad, end=-lpad+filter_shape[-filter_rank], step=1, stride=strides[-filter_rank], initial_state=None)
-#cnb=CO.sequence.broadcast_as(operand, broadcast_as_operand, name)
-#cnbs=CO.sequence.slice(seq, begin_index, end_index, name)
-#cnbsc=CO.sequence.scatter(seq, condition, new_sequence_axis_typeinfo, name)
-#print(cwd.shape)
-#print(cwd.as_numpy()==baseline)
-
-
 # tf uses NHWC not NCHW
 #tf https://www.tensorflow.org/api_guides/python/array_ops#Shapes_and_Shaping
 #code https://github.com/tensorflow/tensorflow/blob/r1.4/tensorflow/python/ops/array_ops.py
-#https://www.tensorflow.org/api_docs/python/tf/while_loop
-#tfb=tf.broadcast_static_shape(shape_x, shape_y)
-#tfs=tf.split()
-#tfss=tf.strided_slice(tfa,[0,0,0,0],[-1,-1,-1,-1],[1,1,1,1])#https://www.tensorflow.org/api_docs/python/tf/strided_slice
-#tfe=tfb.as_numpy() == baseline
-#trevs=tf.reverse_sequence(transf, seq_lengths, seq_axis, batch_axis, name, seq_dim, batch_dim)
-   
+
 print('original input',inputest[-1,-1])
 #inputest=np.reshape(inputest,(1,8,8,3))#np.rollaxis(inputest, 1, 4)
 print('inputest',inputest)
@@ -206,7 +148,7 @@ with sess.as_default() as ff:
     tfrs=tf.reshape(tfimp, (*tfimp.shape[:3],1,-1,*window))
     tran=tf.transpose(tfrs, perm=[0,1,2,3,6,4,5])#[0,3,1,2,6,4,5])
     
-    
+    ####implementing the function in TF
     def var(array,W=_W,B=None,square=0,sqrt=0,V=False,order='NHWC'):
         #W=tf.transpose(W, [0,2,3,1])
         if order=='NHWC':
@@ -262,19 +204,7 @@ with sess.as_default() as ff:
     print('tfa',tfa.eval(),tfa.eval().shape,'TFA')
     print('TFRS',tfrs.eval()[-1,-1],'TFRS')
     print('tfimp',(tfimp.eval())[-1,-1,:],'tfimp')
-    """ if perm:
-        combos=list(itertools.permutations([1,2,3,4,5,6]))
-        for combo in combos:
-            cc=[0,].append(combo)
-            ttt=tf.transpose(tfrs, cc)
-            try:
-                if (ttt.eval()==baseline).all():
-                    print(combo)
-                    break
-            except:
-                if (ttt.eval()==baseline):
-                    print(combo)
-                    break"""
+
     vari=var(tran)
     cov1=conv1.eval()
     #deconv=tfconvt.eval()
@@ -286,8 +216,8 @@ with sess.as_default() as ff:
     #print((tr3.eval()[0]-baseline[0]).mean((-3,-2,-1)))
     #print('reshapetf',tfrs.eval()[-1,-1])
     #print(tfss.eval())
-    squa=1
-    sqrtt=0
+    squa=1 #square variable
+    sqrtt=0 #sqrt variable
     print(convbase,convbase.shape)
     print('tran',tran.eval()[:,-1],'%%'*36,baseline[:,-1],'baseline')
     print('vari',vari.eval())
