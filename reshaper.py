@@ -218,21 +218,21 @@ with sess.as_default() as ff:
     print('tran',tran.eval()[:,-1],'%%'*36,baseline[:,-1],'baseline')
     print('vari',vari.eval())
     print("TRAN W"*12)
-    print('tran',var(tran,square=squa,V=0,sqrt=sqrtt,order='NCHW').eval()[-1,],'tran')#=imgtf2 HIT alg
+    print('tran',var(tran,square=squa,V=0,sqrt=sqrtt,order='NCHW').eval()[-1,],'tran')#== vecvari if weights are not ones
     print("NHWC IMAGE"*12)
-    print('imgtf2',var(wando(imgtf2),square=squa,sqrt=sqrtt,V=0,order='NCHW').eval()[-1,],'imgtf2')#=tfa
-    print('tfa',var(wando(tfa),square=squa,V=0,sqrt=sqrtt,order='NHWC').eval()[-1,],'tfa')#=imgtf2 HIT alg
+    print('imgtf2',var(wando(imgtf2),square=squa,sqrt=sqrtt,V=0,order='NCHW').eval()[-1,],'imgtf2')#nothing
+    print('tfa',var(wando(tfa),square=squa,V=0,sqrt=sqrtt,order='NHWC').eval()[-1,],'tfa')#== vecvari if weights are not ones
     print("TRANSPOSED IMAGE"*10)
-    print('imgtf3',var(wando(imgtf3),square=squa,V=0,sqrt=sqrtt,order='NCHW').eval()[-1,],'imgtf3')#=tfar
-    print('tfar',var(wando(tfar),square=squa,V=0,sqrt=sqrtt,order='NHWC').eval()[-1,],'tfar')#=imgtf3
+    print('imgtf3',var(wando(imgtf3),square=squa,V=0,sqrt=sqrtt,order='NCHW').eval()[-1,],'imgtf3')#nothing
+    print('tfar',var(wando(tfar),square=squa,V=0,sqrt=sqrtt,order='NHWC').eval()[-1,],'tfar')#nothing
     print('TRAN 1'*12)
-    print('1tran',var(tran,W=ones,square=squa,V=1,sqrt=sqrtt,order='NCHW').eval()[-1,],'1tran')#=imgtf2 hit alg w11
+    print('1tran',var(tran,W=ones,square=squa,V=1,sqrt=sqrtt,order='NCHW').eval()[-1,],'1tran')#==vervari if weights are ones
     print("NHWC IMAGE"*12)
-    print('1imgtf2',var(wando(imgtf2),W=ones,square=squa,V=0,sqrt=sqrtt,order='NCHW').eval()[-1,],'1imgtf2')#=tfa
-    print('1tfa',var(wando(tfa),W=ones,square=squa,V=0,sqrt=sqrtt,order='NHWC').eval()[-1,],'1tfa')#=imgtf2 hit alg w11
+    print('1imgtf2',var(wando(imgtf2),W=ones,square=squa,V=0,sqrt=sqrtt,order='NCHW').eval()[-1,],'1imgtf2')#nothing
+    print('1tfa',var(wando(tfa),W=ones,square=squa,V=0,sqrt=sqrtt,order='NHWC').eval()[-1,],'1tfa')#==vervari if weight are ones
     print("TRANSPOSED IMAGE"*10)
-    print('1imgtf3',var(wando(imgtf3),W=ones,square=squa,sqrt=sqrtt,V=0,order='NCHW').eval()[-1,],'1imgtf3')#=tfar
-    print('1tfar',var(wando(tfar),W=ones,square=squa,sqrt=sqrtt,V=0,order='NHWC').eval()[-1,],'1tfar')#=imgtf3 hitbase w11
+    print('1imgtf3',var(wando(imgtf3),W=ones,square=squa,sqrt=sqrtt,V=0,order='NCHW').eval()[-1,],'1imgtf3')#nothing
+    print('1tfar',var(wando(tfar),W=ones,square=squa,sqrt=sqrtt,V=0,order='NHWC').eval()[-1,],'1tfar')#==baseline
     #print(var())
     print(tran.eval()[:,-1,-1])
 #print('target input',baseline[0,-1,-1],'target')
