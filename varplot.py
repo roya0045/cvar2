@@ -1,8 +1,4 @@
-'''
-Created on Dec 12, 2017
 
-@author: ARL
-'''
 from varitest import *
 import matplotlib as mlp
 import matplotlib.pyplot as plt
