@@ -1,8 +1,4 @@
-'''
-Created on Dec 13, 2017
 
-@author: ARL
-'''
 import os
 os.environ['PYTHONPATH'] =r'C:\Users\utilisateur\Anaconda\envs\tensorflow'
 os.environ['PATH']='C:\\Users\\utilisateur\\Anaconda\\envs\\tensorflow\\;C:\\Program Files (x86)\\Graphviz2.38\\bin\\'
