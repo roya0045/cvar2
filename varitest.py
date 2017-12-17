@@ -41,7 +41,7 @@ def baseline(array,w,sqrt=False,square=True):
         hold=np.sqrt(hold)
     return((hold),mean,Input)
 
-def vecvari10(array,W,B=None,sizer='',sqrt=False,square=False,mean=None,convol=False,noB=False,verbose=False):#shape of array must be the same as B
+def vecvari10(array,W,B=None,sizer='',sqrt=False,square=False,mean=None,convol=False,noB=False,verbose=False,sizz=0):#shape of array must be the same as B
     arrs=array.shape
     ashp=W.shape
     #array=np.expand_dims(array,len(array.shape)//2)
@@ -70,15 +70,17 @@ def vecvari10(array,W,B=None,sizer='',sqrt=False,square=False,mean=None,convol=F
     #assert array.shape==W.shape
     if verbose:
         print('array',array.shape,'w',W.shape)
-
+    if sizz==1:
+        size2=size
+    else:
+        size2=np.reshape(np.array([[[W.shape[-2]*W.shape[-1]] for _ in range(size.shape[1])] for _ in range(size.shape[0])]),size.shape)
+    
     ######################################
-    bimi=B.shape[-1]
     try:
         if noB:
-            mean=np.sum((mul),xi)/size
+            mean=np.sum((mul),xi)/size2
         else:
-            mean=np.sum(((mul)+B),xi)/size
-        bimi=B.shape[-1]
+            mean=np.sum(((mul)+B),xi)/size2
     except Exception as E:
         if verbose:
             print(E)
@@ -87,9 +89,9 @@ def vecvari10(array,W,B=None,sizer='',sqrt=False,square=False,mean=None,convol=F
         #######################################
         bimi=B.shape[-3]
         if noB:
-            mean=np.sum((mul),xi,keepdims=1)/size
+            mean=np.sum((mul),xi,keepdims=1)/size2
         else:
-            mean=np.sum(((mul)+B),xi,keepdims=1)/size
+            mean=np.sum(((mul)+B),xi,keepdims=1)/size2
     if verbose:
         print("meansamp",mean[-1,:,:,-1,-1,-1])
         print("etst",mean.shape)
@@ -129,7 +131,7 @@ def vecvari10(array,W,B=None,sizer='',sqrt=False,square=False,mean=None,convol=F
 
 ###data
 
-def vecvari1(array,W,B=None,sizer='',sqrt=False,square=False,mean=None,BB=False,verbose=False):#shape of array must be the same as B
+def vecvari1(array,W,B=None,sizer='',sqrt=False,square=False,mean=None,BB=False,verbose=False,sizz=0):#shape of array must be the same as B
     arrs=array.shape
     #array=np.expand_dims(array,len(array.shape)//2)
     ashp=W.shape
@@ -154,8 +156,12 @@ def vecvari1(array,W,B=None,sizer='',sqrt=False,square=False,mean=None,BB=False,
         print('sizsamp',size[0,0,0])
         print('bbb',B.shape)
         print("size",size.shape)
-
-    mean=np.sum((mul),axis=xi,keepdims=True)/size
+    if sizz==1:
+        size2=size
+    else:
+        size2=np.reshape(np.array([[[W.shape[-2]*W.shape[-1]] for _ in range(size.shape[1])] for _ in range(size.shape[0])]),size.shape)
+    
+    mean=np.sum((mul),axis=xi,keepdims=True)/size2
     if verbose:
         print("meansamp",mean[-1,:,:,-1,-1,-1,-1])
         print("etst",mean.shape)
