@@ -17,7 +17,7 @@ def baseline(array,w,sqrt=False,square=True):
         else:
             av=np.sum(a-am)
         atg=av/(asiz)
-        return av
+        return atg
     wsh=w.shape
     print(wsh)
     ash=array.shape
