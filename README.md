@@ -13,3 +13,6 @@ File explanations:
 
 
 reshaper has the prototypes for TF,cntk and MXNET the layer for Chainer is in another file, the current versions of the alg need some tweaking though, this should be fixed soon
+
+
+The results of varplot documenting the effect of bias on the algorithm are available, they are the 2 png.
