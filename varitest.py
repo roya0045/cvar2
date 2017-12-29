@@ -1,24 +1,52 @@
 
+"""    if convol:#may be totally useless
+        if len(ashp)==3:
+            W=W[::-1,::-1,::-1]
+            if not(B is None):
+                B=B[::-1,::-1,::-1]
+        elif len(ashp)==2:
+            W=W[::-1,::-1]
+            #W=np.fliplr(np.flipud(W))
+            if not(B is None):
+                B=B[::-1,::-1]
+                #B=np.fliplr(np.flipud(B))# does B need to be flipped too?
+        elif len(ashp)==4:
+            W=W[::-1,::-1,::-1,::-1]
+            if not(B is None):
+                B=B[::-1,::-1,::-1,::-1]
+"""
 import chainercutils as cul
 import numpy as np
 from math import ceil
+import itertools
+squa=1
+sqart=1
+v=0
+sizz=1
 #https://docs.scipy.org/doc/numpy-1.10.0/reference/generated/numpy.apply_over_axes.html#numpy.apply_over_axes
 #oginput=[num,chnl,(depth),height/row,width/cols]=4+nd
 #altered input=[num,chnl,ouchnl?,(outd),outheight,outwidht,windowheight,windowwidht]=1+2*dims
 #weight=[num_ouput,chnel,(depth),height/row,widht/col]=4+nd sum over channel to remove dims
 #output=[num,numcel,(depth),H/R,W/C]=4+nd
+#n.tensordot(a,b,axes=([axes for a],[axes for b])) the data are summed for the selected axes
+#n.matmul== multiplication, no reduction
+#n.einsum sum with rules
+#dot  are simply dot product
+#np.reshape(array,a.shape[:len(w.shape]) #makes an array with as many shape as w for mult
+#np.reshape(array,(*W.shape[:2],*a.shape[:len(w.shape]) #don't forget to * if multiple tuple are passed
 
 def baseline(array,w,sqrt=False,square=True):
     def inter(a):
         am=a.mean()
         asiz=len(a.flatten())
         if square:
-            av=np.sum(np.square(a-am))
+            av=np.sum(np.square(a-am))/asiz
         else:
-            av=np.sum(a-am)
-        atg=av/(asiz)
-        return atg
+            av=np.sum(a-am)/asiz
+        return (av)
     wsh=w.shape
+    def ameanalg(a):
+        return(a-a.mean())
     print(wsh)
     ash=array.shape
     hold=np.empty((ash[0],wsh[0],ash[-2]-2,ash[-1]-2),dtype=np.float32)
@@ -39,109 +67,78 @@ def baseline(array,w,sqrt=False,square=True):
             hold[ixm,co]=np.sum(temp,axis=0)
     if sqrt:
         hold=np.sqrt(hold)
-    return((hold),mean,Input)
+    return((hold),mean,Input,temp)
 
-def vecvari10(array,W,B=None,sizer='',sqrt=False,square=False,mean=None,convol=False,noB=False,verbose=False,sizz=0):#shape of array must be the same as B
+def vecvari10(array,W,B=None,sqrt=False,noB=1,verbose=False,sizz=0,KCD=False,**kwargs):#shape of array must be the same as B
     arrs=array.shape
     ashp=W.shape
     #array=np.expand_dims(array,len(array.shape)//2)
     if verbose:
-        print(sizer)
         print('arrayshape',arrs)
         print('Wsample',W[0,0])
         print('wshape',ashp)
     xi=(-2,-1)
     x2=(-3,-2,-1)
-    if len(ashp)==5 :#not all data and all weights == 3d data
-        xi=(-3,-2,-1)
-        x2=(-4,-3,-2,-1)
+    #if len(ashp)==5 :#not all data and all weights == 3d data
+    #    xi=(-3,-2,-1)
+    #    x2=(-4,-3,-2,-1)
     mul=array*W
     if not(B is None)and not(noB):
         size=(np.sum(W,axis=xi,keepdims=True)+np.sum(B,axis=xi[-len(B.shape):],keepdims=True))
     else:
         size=np.sum(W,axis=xi,keepdims=True)#shape=(outputs, channel)
         if B is None:
-            B=np.zeros((W.shape[1]))#channel
+            B=np.zeros((ashp[1]))#channel
     if verbose:
         print('sizsamp',size[0,0,0])
         print('bbb',B.shape)
         print("size",size.shape)
-
-    #assert array.shape==W.shape
-    if verbose:
         print('array',array.shape,'w',W.shape)
-    if sizz==1:
-        size2=size
-    else:
-        size2=np.reshape(np.array([[[W.shape[-2]*W.shape[-1]] for _ in range(size.shape[1])] for _ in range(size.shape[0])]),size.shape)
-    
     ######################################
-    try:
-        if noB:
-            mean=np.sum((mul),xi)/size2
-        else:
-            mean=np.sum(((mul)+B),xi)/size2
-    except Exception as E:
-        if verbose:
-            print(E)
-            print("B2")
-        B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))])) #extend dimentions 
-        #######################################
-        bimi=B.shape[-3]
-        if noB:
-            mean=np.sum((mul),xi,keepdims=1)/size2
-        else:
-            mean=np.sum(((mul)+B),xi,keepdims=1)/size2
+    if sizz==1:
+        mean=np.sum(mul,xi,keepdims=1)/size
+    else:
+        mean=np.sum(mul,xi,keepdims=1)/np.broadcast_to([ashp[-2]*ashp[-1]],(3,1,1))
     if verbose:
         print("meansamp",mean[-1,:,:,-1,-1,-1])
         print("etst",mean.shape)
         print('size',size[0,0])
-    if len(B.shape)==1:
-        B=np.reshape(B,(*B.shape,1))
-    
-    ishp=(*mean.shape[:3],mean.shape[-2],*mean.shape[3::2],1)
-    #print(mean[0,0,0])
-    if verbose:
-        print('ishp1',ishp)
-
-    if square:
-        i=(np.square((mul)-mean)+B)/size
-   else:
-        i=((mul)-mean)/(size)
-
-    if noB:
-        B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
-        out=np.reshape(np.sum(i+B,axis=x2),(arrs[0],ashp[0],arrs[1],arrs[2]))#reshape may be useless
-        #out=np.rollaxis(np.sum(i+B,axis=x2),-1,1)
+        print("amean",(mul-mean)[-1,-1,-1])
+    B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
+    if not(noB):
+        i=(np.square((mul)-mean)+B)/size#B could be included
     else:
-
+        i=(np.square((mul)-mean))/size
+    if KCD:
+        out=np.sum(i,axis=xi)
+    else:
         out=np.rollaxis(np.sum(i,axis=x2),-1,1)
     if verbose:
         print('ishape',i.shape)
-        print(out.shape)
         print('isample',i[-1,-1,-1],i.dtype)
     if sqrt:
         out=np.sqrt(out)
-    #print(out[0,0,0])
-    print("out",out.shape)
-    print(arrs[0],ashp[0],arrs[1],arrs[2])
-    assert out.shape==(arrs[0],ashp[0],arrs[1],arrs[2])
+    if verbose:
+        print("out",out.shape,(arrs[0],ashp[0],arrs[1],arrs[2]))
+    if KCD:
+        out=np.reshape(out,(arrs[0],ashp[0]*arrs[-3],arrs[1],arrs[2]))
+    else:
+        assert out.shape==(arrs[0],ashp[0],arrs[1],arrs[2])
     return(out)
 
 
 ###data
 
-def vecvari1(array,W,B=None,sizer='',sqrt=False,square=False,mean=None,BB=False,verbose=False,sizz=0):#shape of array must be the same as B
+def vecvari1(array,W,B=None,sqrt=False,BB=False,verbose=False,sizz=1,KCD=False,**kwargs):#shape of array must be the same as B
     arrs=array.shape
     #array=np.expand_dims(array,len(array.shape)//2)
     ashp=W.shape
     if verbose:
-        print(sizer)
         print('arrayshape',arrs)
         print('Wsample',W[0,0])
         print('wshape',ashp)
     bt=len(B.shape)==2
-    xi=(-2,-1)
+    xi=(-2,-1)#xi=(-1,-2)
     x2=(-3,-2,-1)
     if len(ashp)==5 :#not all data and all weights == 3d data
         xi=(-3,-2,-1)
@@ -149,47 +146,40 @@ def vecvari1(array,W,B=None,sizer='',sqrt=False,square=False,mean=None,BB=False,
     mul=array*W
     size=np.sum(W,axis=xi,keepdims=True)#shape=(outputs, channel)
     if B is None:
-        B=np.zeros(W.shape[0:2],dtype=np.float32)#channel
-    if BB or bt:
+        B=np.zeros(ashp[0:2],dtype=np.float32)#channel
+    if BB :
         B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
     if verbose:
         print('sizsamp',size[0,0,0])
         print('bbb',B.shape)
         print("size",size.shape)
     if sizz==1:
-        size2=size
+        mean=np.sum((mul),axis=xi,keepdims=True)/size
     else:
-        size2=np.reshape(np.array([[[W.shape[-2]*W.shape[-1]] for _ in range(size.shape[1])] for _ in range(size.shape[0])]),size.shape)
-    
-    mean=np.sum((mul),axis=xi,keepdims=True)/size2
+        mean=np.sum((mul),axis=xi,keepdims=True)/np.broadcast_to([ashp[-2]*ashp[-1]],(ashp[1],1,1))
     if verbose:
         print("meansamp",mean[-1,:,:,-1,-1,-1,-1])
         print("etst",mean.shape)
-
-    if square:
-        if BB:
-            i=(np.square((mul)-mean)+B)/size
-        else:
-            i=(np.square((mul)-mean))/size
-  else:
-     if BB:
-            i=(((mul)-mean)+B)/size
-        else:
-            i=((mul)-mean)/(size)
-   if bt:
-        out=np.rollaxis(np.sum(i+B,axis=x2),-1,1)
+        print("amean",(mul-mean)[-1,-1,-1])
+    if BB:
+        i=(np.square((mul)-mean)+B)/size
     else:
-        out=np.rollaxis(np.sum(i,axis=x2)+B,-1,1)
+        i=(np.square((mul)-mean))/size
+    if KCD:
+        out=np.sum(i,axis=xi)
+    else:
+        out=np.rollaxis(np.sum(i,axis=x2),-1,1)
     if verbose:
         print(i.shape)
         print('isample',i[-1,-1,-1],i.dtype)
-        print(out.shape)
     if sqrt:
         out=np.sqrt(out)
     if verbose:
-        print("out",out.shape)
-        print(arrs[0],ashp[0],arrs[-5],arrs[-4])
-    assert out.shape==(arrs[0],ashp[0],arrs[1],arrs[2])
+        print("out",out.shape,(arrs[0],ashp[0],arrs[-5],arrs[-4]))
+    if KCD:
+        out=np.reshape(out,(arrs[0],ashp[0]*arrs[-3],arrs[1],arrs[2]))
+    else:
+        assert out.shape==(arrs[0],ashp[0],arrs[1],arrs[2])
     return(out)
 
 
@@ -236,49 +226,79 @@ b2=np.array([b for _ in range(shape[0])])
 b2=np.rollaxis(b2, 1, 0)
 inputcols=cul.im2col_cpuV2(inputest, window[0], window[1], stride[0], stride[1], pad[0], pad[1], pval=0, cover_all=False, dy=1, dx=1,
         out_h=None, out_w=None,og=0,channel1=0)
+#inputcolsv1=cul.im2col_cpuV2(inputest, window[0], window[1], stride[0], stride[1], pad[0], pad[1], pval=0, cover_all=False, dy=1, dx=1,
+#        out_h=None, out_w=None,og=1,reshape=True
+#        ,channel1=0)#horrible, don't use
+#print((inputcolsv1-inputcolsv2)[-1])
 inputcolsog=cul.im2col_cpuV2(inputest, window[0], window[1], stride[0], stride[1], pad[0], pad[1], pval=0, cover_all=False, dy=1, dx=1,
         out_h=None, out_w=None,og=True,channel1=False)
 #print((inputcolsog-inputcolsv2)[-1])
 wid=_W#w11
+b0=np.zeros(b2.shape,dtype=np.float32)
+BASE,MEAN,INP,iBASE=baseline(inputest, w11,square=squa,sqrt=sqart)
+#test with wid
+p=vecvari1(inputcols, wid, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=sizz)
+d=vecvari10(inputcols, wid, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=sizz)
+#test with weights all set to 1
+p20=vecvari1(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=0)
+d20=vecvari10(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=0)
+p21=vecvari1(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=1)
+d21=vecvari10(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=1)
+
 if __name__=='__main__':
     
-    print('tensordot1',np.tensordot(inputcols, wid, axes=((-3,-2,-1),(-3,-2,-1)))[-1,-1])   #test the effect of the "convolution"
-    print('tensordot2',np.tensordot(inputcolsog, wid, axes=((1,2,3),(1,2,3)))[-1,-1])   #test the effect of the "convolution"
+    compar1=0
+    if compar1:
+        print('#'*32)
+        print('V10b',vecvari10(inputcols,wid,square=1,sqrt=0,B=b2[:-3],verbose=True)[-1,-1])
+        print('#'*32)
+        print('V10nob',vecvari10(inputcols,wid,square=1,sqrt=0,noB=1,B=b2[:-3],verbose=True)[-1,-1])
+        print('#'*32)
+    print('tensordot1',np.tensordot(inputcols, wid, axes=((-3,-2,-1),(-3,-2,-1)))[-1,-1])   
+    print('tensordot2',np.tensordot(inputcolsog, wid, axes=((1,2,3),(1,2,3)))[-1,-1])
     print(inputcols[-1,-1,-1,:],'\n',inputcolsog[-1,-1,:,-1],'\n',w3[-1],'\n',wid[-1])
     
     print('#'*32)
-    #test the impact of B, see varplot for better implementation
-    #b0=np.zeros(b2.shape,dtype=np.float32)
-    #b20=b2*100
-    #holdd=[b,b2+1,b20,b0]
-    #for numb,bb in enumerate(holdd): 
-    #    print('ROUND ',numb)
-    #    bb=bb[:1]
-    #    b1110=(vecvari1(inputcols,wid,square=0,sqrt=0,B=bb,sizer='trone',verbose=1)-vecvari10(inputcols,wid,square=1,sqrt=0,noB=0,B=bb,sizer='trone',verbose=0))
-    #    nb1110=(vecvari1(inputcols,wid,square=0,sqrt=0,B=bb,sizer='trone',verbose=0)-vecvari10(inputcols,wid,square=1,sqrt=0,noB=1,B=bb,sizer='trone',verbose=0))
-    #    print('#'*32)
-    #    print('rawsv1.1 vs 1.0bb','\n 11b',vecvari1(inputcols,wid,square=0,sqrt=0,B=bb,sizer='11b',verbose=0)[-1,-1],'\n 10b',vecvari10(inputcols,wid,square=0,sqrt=0,noB=0,B=bb,sizer='10b',verbose=0)[-1,-1],'\n 10nob',vecvari10(inputcols,wid,square=0,sqrt=0,noB=1,B=bb,sizer='10nob',verbose=0)[-1,-1])
-    #    print('v1.1 vs 1.0bb',b1110.mean(),b1110.max(),b1110.min(),b1110[-1,-1],'\n','v1.1 - 1nob',nb1110.mean(),nb1110.max(),nb1110.min(),nb1110[-1,-1])
-    #    #u=vecvari10(inputcols, wid, B=b0)
+    
+    b20=b2*100
+    
+    holdd=[b,b2+1,b20,b0]
+    compb=0
+    if compb:
+        for numb,bb in enumerate(holdd):
+            print('ROUND ',numb)
+            bb=bb[:1]
+            b1110=(vecvari1(inputcols,wid,square=0,sqrt=0,B=bb,verbose=1)-vecvari10(inputcols,wid,square=1,sqrt=0,noB=0,B=bb,sizer='trone',verbose=0))
+            nb1110=(vecvari1(inputcols,wid,square=0,sqrt=0,B=bb,verbose=0)-vecvari10(inputcols,wid,square=1,sqrt=0,noB=1,B=bb,sizer='trone',verbose=0))
+    
+            print('#'*32)
+            print('rawsv1.1 vs 1.0bb','\n 11b',vecvari1(inputcols,wid,square=0,sqrt=0,B=bb,verbose=0)[-1,-1],'\n 10b',vecvari10(inputcols,wid,square=0,sqrt=0,noB=0,B=bb,sizer='10b',verbose=0)[-1,-1],'\n 10nob',vecvari10(inputcols,wid,square=0,sqrt=0,noB=1,B=bb,sizer='10nob',verbose=0)[-1,-1])
+            print('v1.1 vs 1.0bb',b1110.mean(),b1110.max(),b1110.min(),b1110[-1,-1],'\n','v1.1 - 1nob',nb1110.mean(),nb1110.max(),nb1110.min(),nb1110[-1,-1])
+            #u=vecvari10(inputcols, wid, B=b0)
+    #v=vecvari10(inputcolsv2, wid, B=b0)
+    #y=vecvari20(inputcolsog, wid, B=b0)
     print('#'*32)
-   
-    squa=1
-    sqart=0
-    BASE,MEAN,INP=baseline(inputest, w11,square=squa,sqrt=sqart)
-    #test with wid
-    p=vecvari1(inputcols, wid, B=b0[:1],square=squa,sqrt=sqart,sizer='v1',verbose=1)
-    d=vecvari10(inputcols, wid, B=b0[:1],square=squa,sqrt=sqart,sizer='v10',verbose=1)
-    #test with weights all set to 1
-    p2=vecvari1(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,sizer='v1',verbose=1)
-    d2=vecvari10(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,sizer='v10',verbose=1)
-    print('MEANBASE',MEAN[-1,-1],MEAN.shape)
+    #print(v[-1,-1],y[-1,-1],u[-1,-1])
+    #print(vecvari1(inputcolsv1, wid, B=b0,verbose=1)[-1,-1])
+    
+
+    print('MEANBASE',MEAN[-1],MEAN.shape)
     #mean2=np.rollaxis(MEAN, 1, 4)
-    print('BASE',BASE,BASE.shape,'\n p2',p2,'\n d2',d2)
+    print(iBASE,'IBASE')
+    print('BASE',BASE,BASE.shape,)
     print('p with wid',p[-1,-1])
     print('d with wid',d[-1,-1])
     print(np.transpose(p, [0,2,3,1]))
+    print((vecvari1(inputcols, wid, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=0)-vecvari1(inputcols, wid, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=1))[-1,-1],'test sizz WID')
+    print((vecvari1(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=0)-vecvari1(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=1))[-1,-1],'test sizz W11')
     #p1=p-BASE
     #d1=d-BASE
+    print(BASE[-1,-1],'target?')
+    print(inputcols.shape)
+    t1=vecvari10(inputcols, wid, B=b0[:1],square=squa,sqrt=sqart,verbose=0,sizz=3,KCD=1)
+    t2=vecvari10(inputcols, wid, B=b0[:1],square=squa,sqrt=sqart,verbose=0,sizz=2,KCD=1)
+    t3=vecvari1(inputcols, wid, B=b0[:1], sqrt=sqart, square=squa, verbose=0, sizz=0, KCD=1)
+    print(t1-t2)
     #print(p1.mean(),p1.max(),p1.min())
     #print(d1.mean(),d1.max(),d1.min())
     #print(INP.shape,inputcols.shape)
@@ -289,10 +309,10 @@ if __name__=='__main__':
     #print(inputcols==INP)
     #print(BASE,p)
     #print(np.tensordot(inputcolsv1,wid,axes=((-2,-1),(-2,-1))))
-    
+    ####cleaned code v1 ###
+    print(np.array([-4.56674e-06])/9)
 
 
-#####cleaned codes and backups#####
 def VecVariB(array,W,B=None,sqrt=False,square=False):
     arrs=array.shape
     ashp=W.shape
@@ -311,10 +331,8 @@ def VecVariB(array,W,B=None,sqrt=False,square=False):
             B=np.zeros((W.shape[1]))#channel
     try:
         mean=np.sum(((mul)+B),xi)/size
-        bimi=B.shape[-1]
     except Exception as E:
         B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
-        bimi=B.shape[-3]
         mean=np.sum(((mul)+B),xi,keepdims=1)/size
     if len(B.shape)==1:
         B=np.reshape(B,(*B.shape,1))
@@ -355,8 +373,6 @@ def VecVari1(array,W,B=None,sqrt=False,square=False):
     assert out.shape==(arrs[0],ashp[0],arrs[1],arrs[2])
     return(out)
 
-
-#####backups, just in case######
 def vecvari2(array,W,B=None,sizer='',sqrt=False,square=False,mean=None,noB=False,convol=False,verbose=False):#shape of array must be the same as B
     arrs=array.shape
     ashp=W.shape
@@ -416,9 +432,6 @@ def vecvari2(array,W,B=None,sizer='',sqrt=False,square=False,mean=None,noB=False
         print('outhspa???',arrs[0],ashp[0],arrs[-2],arrs[-1])
     assert out.shape==(arrs[0],ashp[0],arrs[-2],arrs[-1])
     return(out)
-
-
-#####backups, just in case######
 def vecvari20(array,W,B=None,sizer='',sqrt=False,square=False,mean=None,noB=False,convol=False,verbose=False):#shape of array must be the same as B
 
     arrs=array.shape
