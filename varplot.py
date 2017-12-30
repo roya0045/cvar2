@@ -138,9 +138,13 @@ def plotvars(BB):
         print(outputs[I]['max'][0],outputs[I]['max'][9*4],outputs[I]['max'][-1])
         print(outputs[I]['min'][0],outputs[I]['min'][9*4],outputs[I]['min'][-1])
     #plt.ion() 
+    plt.tight_layout(pad=0.5, h_pad=0.5, w_pad=0.5,rect=(0,0.1,1,1))
     plt.legend(['BB:0,BS:0, mean','BB:0,BS:0, max','BB:0,BS:0, min',
                 'BB:1,BS:0, mean','BB:1,BS:0, max','BB:1,BS:0, min',
-                'BB:0,BS:1, mean','BB:0,BS:1, max','BB:0,BS:1, min'],markerfirst=True) 
+                'BB:0,BS:1, mean','BB:0,BS:1, max','BB:0,BS:1, min'],markerfirst=True,
+               bbox_to_anchor=(0,0,1,0), loc=2,
+               ncol=3, mode="expand", borderaxespad=0.5) 
+    #https://matplotlib.org/users/legend_guide.html
     plt.show()
     
     
