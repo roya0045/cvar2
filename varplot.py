@@ -37,17 +37,20 @@ def plotvars(BB):
     ding=0
     hol=[bs,WAR][BB]
     for bb in hol:
+        print(bb[:,0])
         if BB==0:
             #print(wid.shape,bb.shape)
-            d1=vecvari10(inputcols, wid,noB=0, B=bb,sqrt=sqrtv,verbose=0,mulb=mulbv,sizz=sizz[0])
-            d2=vecvari10(inputcols, wid,noB=1, B=bb,sqrt=sqrtv,verbose=0,mulb=mulbv,sizz=sizz[0])#-vecvari10(inputcols, wid,noB=0, B=bb,square=0,sqrt=0,verbose=0)
+            d1=vecvari10(inputcols, wid,BB=0, B=bb,sqrt=sqrtv,verbose=0,mulb=mulbv,sizz=sizz[0])
+            d2=vecvari10(inputcols, wid,BB=1, B=bb,sqrt=sqrtv,verbose=0,mulb=mulbv,sizz=sizz[0])
+            d3=vecvari10(inputcols, wid,BB=0,BS=1, B=bb,sqrt=sqrtv,verbose=0,mulb=mulbv,sizz=sizz[0])#-vecvari10(inputcols, wid,noB=0, B=bb,square=0,sqrt=0,verbose=0)
             p1=vecvari1(inputcols, wid, B=bb,BB=0,sqrt=sqrtv,verbose=0,mulb=mulbv,sizz=sizz[1])
             p2=vecvari1(inputcols, wid, B=bb,BB=1,sqrt=sqrtv,verbose=0,mulb=mulbv,sizz=sizz[1])
+            p3=vecvari1(inputcols, wid, B=bb,BB=0,BS=1,sqrt=sqrtv,verbose=0,mulb=mulbv,sizz=sizz[1])
         elif BB==1:
             print(bb.shape,bs[9].shape)
             d=vecvari10(inputcols, bb, B=bs[9],sqrt=sqrtv,verbose=0,mulb=mulbv,sizz=sizz[0])
             p=vecvari1(inputcols, bb, B=bs[9],sqrt=sqrtv,verbose=0,mulb=mulbv,sizz=sizz[1])
-        for iou,out in enumerate([(d1,d2),(p1,p2),(d1-p1,d2-p2)]):
+        for iou,out in enumerate([(d1,d2,d3),(p1,p2,p3),(d1-p1,d2-p2,d3-p3)]):
             if iou==0:
                 ding+=1
             iou+=1
@@ -55,7 +58,7 @@ def plotvars(BB):
             #print(out.mean(axs).shape)
             out1=out[0]
             out2=out[1]
-            out3=out1-out2
+            out3=out[2]#out1-out2
             [outputs[iou]['1mean'].append(oo) for oo in out1.mean(axs)]
             [outputs[iou]['1max'].append(oo) for oo in out1.max(axs)]
             [outputs[iou]['1min'].append(oo) for oo in out1.min(axs)]
@@ -83,8 +86,9 @@ def plotvars(BB):
                  bx,outputs[1]['2min'],'c>--',
                  bx,outputs[1]['mean'],'ys-',
                  bx,outputs[1]['max'],'rs-',
-                 bx,outputs[1]['min'],'bs-',markersize=6)
+                 bx,outputs[1]['min'],'bs-',markersize=6,)
         plt.setp(f1.set_xscale('log'))
+        plt.setp(f1.set_title('vecvari10,sizz{}, mulb{}'.format(sizz,mulbv)))
         if ylog:
             plt.setp(f1.set_yscale('log'))
         f2=plt.subplot(312,sharex=f1)#,sharey=f1)
@@ -96,8 +100,9 @@ def plotvars(BB):
                  bx,outputs[2]['2min'],'c>--',
                  bx,outputs[2]['mean'],'yo-',
                  bx,outputs[2]['max'],'ro-',
-                 bx,outputs[2]['min'],'bo-',markersize=6)
+                 bx,outputs[2]['min'],'bo-',markersize=6,)
         plt.setp(f2.set_xscale('log'))
+        plt.setp(f2.set_title('vecvari1,sizz{}, mulb{}'.format(sizz,mulbv)))
         if ylog:
             plt.setp(f2.set_yscale('log'))
         f3=plt.subplot(313,sharex=f1)#,sharey=f1)
@@ -109,8 +114,9 @@ def plotvars(BB):
                  bx,outputs[3]['2min'],'c>--',
                  bx,outputs[3]['mean'],'yH-',
                  bx,outputs[3]['max'],'rH-',
-                 bx,outputs[3]['min'],'bH-',markersize=6)
+                 bx,outputs[3]['min'],'bH-',markersize=6,)
         plt.setp(f3.set_xscale('log'))
+        plt.setp(f3.set_title('vecvari10-vecvari1,sizz{}, mulb{}'.format(sizz,mulbv)))
         if ylog:
             plt.setp(f3.set_yscale('log'))
     else: #all in one plot
@@ -131,7 +137,10 @@ def plotvars(BB):
         print(outputs[I]['mean'][0],outputs[I]['mean'][9*4],outputs[I]['mean'][-1])
         print(outputs[I]['max'][0],outputs[I]['max'][9*4],outputs[I]['max'][-1])
         print(outputs[I]['min'][0],outputs[I]['min'][9*4],outputs[I]['min'][-1])
-    #plt.ion()  
+    #plt.ion() 
+    plt.legend(['BB:0,BS:0, mean','BB:0,BS:0, max','BB:0,BS:0, min',
+                'BB:1,BS:0, mean','BB:1,BS:0, max','BB:1,BS:0, min',
+                'BB:0,BS:1, mean','BB:0,BS:1, max','BB:0,BS:1, min'],markerfirst=True) 
     plt.show()
     
     

@@ -69,7 +69,7 @@ def baseline(array,w,sqrt=False,square=True):
         hold=np.sqrt(hold)
     return((hold),mean,Input,temp)
 
-def vecvari10(array,W,B=None,sqrt=False,noB=1,verbose=False,sizz=0,KCD=False,mulb=False,**kwargs):#shape of array must be the same as B
+def vecvari10(array,W,B=None,sqrt=False,BB=1,verbose=False,BS=False,sizz=0,KCD=False,mulb=False,**kwargs):#shape of array must be the same as B
     arrs=array.shape
     ashp=W.shape
     #array=np.expand_dims(array,len(array.shape)//2)
@@ -87,7 +87,7 @@ def vecvari10(array,W,B=None,sqrt=False,noB=1,verbose=False,sizz=0,KCD=False,mul
         mul=(array*W)+B
     else:
         mul=array*W
-    if not(B is None)and not(noB):
+    if not(B is None)and BB:
         size=(np.sum(W,axis=xi,keepdims=True)+np.sum(B,axis=xi[-len(B.shape):],keepdims=True))
     else:
         size=np.sum(W,axis=xi,keepdims=True)#shape=(outputs, channel)
@@ -109,10 +109,10 @@ def vecvari10(array,W,B=None,sqrt=False,noB=1,verbose=False,sizz=0,KCD=False,mul
         print('size',size[0,0])
         print("amean",(mul-mean)[-1,-1,-1])
     B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
-    if not(noB):
+    if BB:
         i=(np.square((mul)-mean)+B)/size#B could be included
     else:
-        i=(np.square((mul)-mean)+B)/size
+        i=(np.square((mul)-mean))/size
     if KCD:
         out=np.sum(i,axis=xi)
     else:
@@ -128,12 +128,17 @@ def vecvari10(array,W,B=None,sqrt=False,noB=1,verbose=False,sizz=0,KCD=False,mul
         out=np.reshape(out,(arrs[0],ashp[0]*arrs[-3],arrs[1],arrs[2]))
     else:
         assert out.shape==(arrs[0],ashp[0],arrs[1],arrs[2])
-    return(out)
+    
+    if not(BB) and BS:
+        B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
+        return(out+B[:,0])
+    else:
+        return(out)
 
 
 ###data
 
-def vecvari1(array,W,B=None,sqrt=False,BB=False,verbose=False,sizz=1,KCD=False,mulb=False,**kwargs):#shape of array must be the same as B
+def vecvari1(array,W,B=None,sqrt=False,BB=False,BS=False,verbose=False,sizz=1,KCD=False,mulb=False,**kwargs):#shape of array must be the same as B
     arrs=array.shape
     #array=np.expand_dims(array,len(array.shape)//2)
     ashp=W.shape
@@ -188,7 +193,12 @@ def vecvari1(array,W,B=None,sqrt=False,BB=False,verbose=False,sizz=1,KCD=False,m
         out=np.reshape(out,(arrs[0],ashp[0]*arrs[-3],arrs[1],arrs[2]))
     else:
         assert out.shape==(arrs[0],ashp[0],arrs[1],arrs[2])
-    return(out)
+        
+    if not(BB)and BS:
+        B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
+        return(out+B[:,0])
+    else:
+        return(out)
 
 
 ###data
@@ -245,16 +255,16 @@ wid=_W#w11
 b0=np.zeros(b2.shape,dtype=np.float32)
 BASE,MEAN,INP,iBASE=baseline(inputest, w11,square=squa,sqrt=sqart)
 #test with wid
-p=vecvari1(inputcols, wid, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=sizz)
-d=vecvari10(inputcols, wid, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=sizz)
-#test with weights all set to 1
-p20=vecvari1(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=0)
-d20=vecvari10(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=0)
-p21=vecvari1(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=1)
-d21=vecvari10(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=1)
+
 
 if __name__=='__main__':
-    
+    p=vecvari1(inputcols, wid, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=sizz)
+    d=vecvari10(inputcols, wid, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=sizz)
+    #test with weights all set to 1
+    p20=vecvari1(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=0)
+    d20=vecvari10(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=0)
+    p21=vecvari1(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=1)
+    d21=vecvari10(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=1)
     compar1=0
     if compar1:
         print('#'*32)
