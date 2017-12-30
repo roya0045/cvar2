@@ -69,7 +69,7 @@ def baseline(array,w,sqrt=False,square=True):
         hold=np.sqrt(hold)
     return((hold),mean,Input,temp)
 
-def vecvari10(array,W,B=None,sqrt=False,noB=1,verbose=False,sizz=0,KCD=False,**kwargs):#shape of array must be the same as B
+def vecvari10(array,W,B=None,sqrt=False,noB=1,verbose=False,sizz=0,KCD=False,mulb=False,**kwargs):#shape of array must be the same as B
     arrs=array.shape
     ashp=W.shape
     #array=np.expand_dims(array,len(array.shape)//2)
@@ -82,7 +82,11 @@ def vecvari10(array,W,B=None,sqrt=False,noB=1,verbose=False,sizz=0,KCD=False,**k
     #if len(ashp)==5 :#not all data and all weights == 3d data
     #    xi=(-3,-2,-1)
     #    x2=(-4,-3,-2,-1)
-    mul=array*W
+    if mulb:
+        B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
+        mul=(array*W)+B
+    else:
+        mul=array*W
     if not(B is None)and not(noB):
         size=(np.sum(W,axis=xi,keepdims=True)+np.sum(B,axis=xi[-len(B.shape):],keepdims=True))
     else:
@@ -108,7 +112,7 @@ def vecvari10(array,W,B=None,sqrt=False,noB=1,verbose=False,sizz=0,KCD=False,**k
     if not(noB):
         i=(np.square((mul)-mean)+B)/size#B could be included
     else:
-        i=(np.square((mul)-mean))/size
+        i=(np.square((mul)-mean)+B)/size
     if KCD:
         out=np.sum(i,axis=xi)
     else:
@@ -129,7 +133,7 @@ def vecvari10(array,W,B=None,sqrt=False,noB=1,verbose=False,sizz=0,KCD=False,**k
 
 ###data
 
-def vecvari1(array,W,B=None,sqrt=False,BB=False,verbose=False,sizz=1,KCD=False,**kwargs):#shape of array must be the same as B
+def vecvari1(array,W,B=None,sqrt=False,BB=False,verbose=False,sizz=1,KCD=False,mulb=False,**kwargs):#shape of array must be the same as B
     arrs=array.shape
     #array=np.expand_dims(array,len(array.shape)//2)
     ashp=W.shape
@@ -143,7 +147,11 @@ def vecvari1(array,W,B=None,sqrt=False,BB=False,verbose=False,sizz=1,KCD=False,*
     if len(ashp)==5 :#not all data and all weights == 3d data
         xi=(-3,-2,-1)
         x2=(-4,-3,-2,-1)
-    mul=array*W
+    if mulb:
+        B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
+        mul=(array*W)+B
+    else:
+        mul=array*W
     size=np.sum(W,axis=xi,keepdims=True)#shape=(outputs, channel)
     if B is None:
         B=np.zeros(ashp[0:2],dtype=np.float32)#channel
