@@ -1,5 +1,8 @@
+'''
+Created on Dec 2, 2017
 
-##taken from chainer
+@author: ARL
+'''
 ###conv utils
 
 import numpy
@@ -9,14 +12,15 @@ from chainer import cuda
 
 
 def get_conv_outsize(size, k, s, p, cover_all=False, d=1):
+    "data,kernel, step, stride,pad,cover, dilation"
+    dk = k + (k - 1) * (d - 1)
+    if cover_all:
+        return (size + p * 2 - dk + s - 1) // s + 1
+    else:
+        return (size + p * 2 - dk) // s + 1
+
+def get_conv_outsizeV2(size, k, s=1, p=0, cover_all=False, d=1):
     """Calculates output size of convolution.
-
-    This function takes the size of input feature map, kernel, stride, and
-    pooling of one particular dimension, then calculates the output feature
-    map size of that dimension.
-
-    .. seealso:: :func:`~chainer.utils.get_deconv_outsize`
-
     Args:
         size (int): The size of input feature map. It usually is the length of
             a side of feature map.
@@ -30,11 +34,35 @@ def get_conv_outsize(size, k, s, p, cover_all=False, d=1):
         int: The expected output size of the convolution operation.
 
     """
-    dk = k + (k - 1) * (d - 1)
-    if cover_all:
-        return (size + p * 2 - dk + s - 1) // s + 1
-    else:
-        return (size + p * 2 - dk) // s + 1
+    try:
+        if size.__len__()>1:
+            hold=list()
+            for i in (k,s,p,d):
+                if isinstance(i, int):
+                    i=[i for _ in range(size.__len__())]
+                    hold.append(i)
+                elif len(i)==len(size):
+                    hold.append(i)
+                else:
+                    raise BaseException("variables must be the same shape as size or ints")
+            out=tuple()
+            for x,I in enumerate(size):
+                st1= (I + hold[2][x] * 2 - (hold[0][x] + (hold[0][x] - 1) * (hold[3][x] - 1)) + hold[1][x])
+                if cover_all:
+                    st1-=1
+                val= st1 // hold[1][x] + 1
+                out+=(val,)
+            return(out)
+        else:
+            assert True==False
+    except AssertionError:
+        st1=(size + p * 2 - (k + (k - 1) * (d - 1)) + s)
+        if cover_all:
+            st1-=1
+        return st1//s+1
+
+
+        
 
 
 def get_deconv_outsize(size, k, s, p, cover_all=False, d=1):
@@ -69,42 +97,21 @@ def get_deconv_outsize(size, k, s, p, cover_all=False, d=1):
 def im2col_cpuV2(
         img, kh, kw, sy, sx, ph, pw, pval=0, cover_all=False, dy=1, dx=1,
         out_h=None, out_w=None,og=True,channel1=False):
-    """
-    Extract patches from an image based on the filter.
-
-This function rearranges patches of an image and put them in the channel dimension of the output.
-
-Patches are extracted at positions shifted by multiples of stride from the first position -pad for each spatial axis. The right-most (or bottom-most) patches do not run over the padded spatial size.
-
-Notation: here is a notation.
-
-n is the batch size.
-c is the number of the input channels.
-h and w are the height and width of the input image, respectively.
-kH and kW are the height and width of the filters, respectively.
-sY and sX are the strides of the filter.
-pH and pW are the spatial padding sizes.
-dY and dX are the dilation factors of filter application.
-The output size (hO,wO)(hO,wO) is determined by the following equations when cover_all = False:
-
-hOwO=(h+2pH−kH−(kH−1)∗(dY−1))/sY+1,=(w+2pW−kW−(kW−1)∗(dX−1))/sX+1.
-hO=(h+2pH−kH−(kH−1)∗(dY−1))/sY+1,wO=(w+2pW−kW−(kW−1)∗(dX−1))/sX+1.
-When cover_all = True, the output size is determined by the following equations:
-
-hOwO=(h+2pH−kH−(kH−1)∗(dY−1)+sY−1)/sY+1,=(w+2pW−kW−(kW−1)∗(dX−1)+sX−1)/sX+1.
-hO=(h+2pH−kH−(kH−1)∗(dY−1)+sY−1)/sY+1,wO=(w+2pW−kW−(kW−1)∗(dX−1)+sX−1)/sX+1.
-Parameters:    
-x (Variable) – Input variable of shape (n,c,h,w)(n,c,h,w).
-ksize (int or pair of ints) – Size of filters (a.k.a. kernels). ksize=k and ksize=(k, k) are equivalent.
-stride (int or pair of ints) – Stride of filter applications. stride=s and stride=(s, s) are equivalent.
-pad (int or pair of ints) – Spatial padding width for input arrays. pad=p and pad=(p, p) are equivalent.
-cover_all (bool) – If True, all spatial locations are rearranged into some output pixels. It may make the output size larger.
-dilate (int or pair of ints) – Dilation factor of filter applications. dilate=d and dilate=(d, d) are equivalent.
-Returns:    
-Output variable whose shape is (n,c⋅kH⋅kW,hO,wO)(n,c⋅kH⋅kW,hO,wO)
-
-Return type:    
-Variable
+    """n is the batch size.
+    c is the number of the input channels.
+    h and w are the height and width of the input image
+    kH and kW are the height and width of the filters
+    sY and sX are the strides of the filter.
+    pH and pW are the spatial padding sizes.
+    dY and dX are the dilation factors of filter application.
+    
+    The output size (hO,wO)(hO,wO) is determined by the following equations when cover_all = False:
+    hOwO=(h+2pH−kH−(kH−1)∗(dY−1))/sY+1,=(w+2pW−kW−(kW−1)∗(dX−1))/sX+1.
+    hO=(h+2pH−kH−(kH−1)∗(dY−1))/sY+1,wO=(w+2pW−kW−(kW−1)∗(dX−1))/sX+1.
+    
+    When cover_all = True, the output size is determined by the following equations:
+    hOwO=(h+2pH−kH−(kH−1)∗(dY−1)+sY−1)/sY+1,=(w+2pW−kW−(kW−1)∗(dX−1)+sX−1)/sX+1.
+    hO=(h+2pH−kH−(kH−1)∗(dY−1)+sY−1)/sY+1,wO=(w+2pW−kW−(kW−1)∗(dX−1)+sX−1)/sX+1.
     """
     #if not(og) and not(channel1):
     #    img=numpy.rollaxis(img, 1, len(img.shape))
@@ -116,8 +123,7 @@ Variable
         out_w = get_conv_outsize(w, kw, sx, pw, cover_all, dx)
     assert out_w > 0, 'Width in the output should be positive.'
 
-    img = numpy.pad(img,
-                    ((0, 0), (0, 0), (ph, ph + sy - 1), (pw, pw + sx - 1)),
+    img = numpy.pad(img,((0, 0), (0, 0), (ph, ph + sy - 1), (pw, pw + sx - 1)),
                     mode='constant', constant_values=(pval,))
     if og==1:#og shape is [num,chanel,window,window,output,output]
         col = numpy.ndarray((n, c, kh, kw, out_h, out_w), dtype=img.dtype)
@@ -126,15 +132,14 @@ Variable
             j_lim = jdy + sy * out_h
             for i in six.moves.range(kw):
                 idx = i * dx #window index * dilation
-                i_lim = idx + sx * out_w
-                col[:, :, j, i, :, :] = img[:, :, jdy:j_lim:sy, idx:i_lim:sx]
+                col[:, :, j, i, :, :] = img[:, :, jdy:j_lim:sy, idx:idx + sx * out_w:sx]
 
     elif og==2:
         pass
     else:#now shape is [number ,output,output, channel, window, window
-        #if channel1:
         colshape=(n,c, out_h, out_w, kh, kw)
-        colshape2=(n, out_h, out_w, c, kh, kw)
+
+        #colshape=(n, out_h, out_w, c, kh, kw)
         #col = numpy.ndarray((n, out_h, out_w,1, c, kh, kw), dtype=img.dtype)
         col = numpy.ndarray(colshape, dtype=img.dtype)  
         #col = numpy.ndarray((n, out_h, out_w, c, kh, kw), dtype=img.dtype)
@@ -144,8 +149,7 @@ Variable
             j_lim = jdy + sy * out_h
             for H in six.moves.range(kw):
                 idx = H * dx #window index * dilation
-                i_lim = idx + sx * out_w
-                col[:,:,:,:,R,H]=img[:, :, jdy:j_lim:sy, idx:i_lim:sx]#pour chaque point
+                col[:,:,:,:,R,H]=img[:, :, jdy:j_lim:sy, idx:idx + sx * out_w:sx]#pour chaque point
         if not(channel1):
             col=numpy.expand_dims(numpy.rollaxis(col,1,-2),len(col.shape)//2)
             #col=numpy.expand_dims(numpy.reshape(col,colshape2),len(col.shape)//2)
@@ -189,19 +193,32 @@ def im2col_gpu(img, kh, kw, sy, sx, ph, pw, cover_all=False, dy=1, dx=1,
     return col
 
 
-def col2im_cpu(col, sy, sx, ph, pw, h, w, dy=1, dx=1):
-    n, c, kh, kw, out_h, out_w = col.shape
-    img = numpy.zeros((n, c, h + 2 * ph + sy - 1, w + 2 * pw + sx - 1),
-                      dtype=col.dtype)
-    for j in six.moves.range(kh):
-        jdy = j * dy
-        j_lim = jdy + sy * out_h
-        for i in six.moves.range(kw):
-            idx = i * dx
-            i_lim = idx + sx * out_w
-            img[:, :, jdy:j_lim:sy, idx:i_lim:sx] += col[:, :, j, i]
-    return img[:, :, ph:h + ph, pw:w + pw]
-
+def col2im_cpuV2(col, sy, sx, ph, pw, h, w, dy=1, dx=1,og=True):
+    "stride,pad,dims,dil"
+    if og:
+        n, c, kh, kw, out_h, out_w = col.shape
+        img = numpy.zeros((n, c, h + 2 * ph + sy - 1, w + 2 * pw + sx - 1),
+                          dtype=col.dtype)
+        for j in six.moves.range(kh):
+            jdy = j * dy
+            j_lim = jdy + sy * out_h
+            for i in six.moves.range(kw):
+                idx = i * dx
+                i_lim = idx + sx * out_w
+                img[:, :, jdy:j_lim:sy, idx:i_lim:sx] += col[:, :, j, i]
+        return img[:, :, ph:h + ph, pw:w + pw]
+    else:
+        n, c, kh, kw, out_h, out_w = col.shape
+        img = numpy.zeros((n, c, h + 2 * ph + sy - 1, w + 2 * pw + sx - 1),
+                          dtype=col.dtype)
+        for j in six.moves.range(kh):
+            jdy = j * dy
+            j_lim = jdy + sy * out_h
+            for i in six.moves.range(kw):
+                idx = i * dx
+                i_lim = idx + sx * out_w
+                img[:, :, jdy:j_lim:sy, idx:i_lim:sx] += col[:, :, j, i]
+        return img[:, :, ph:h + ph, pw:w + pw]
 
 def col2im_gpu(col, sy, sx, ph, pw, h, w, dy=1, dx=1):
     n, c, kh, kw, out_h, out_w = col.shape
