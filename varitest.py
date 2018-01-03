@@ -1,4 +1,28 @@
+"""
+variance is used to mesure the distance of each value from the average
 
+so: 
+negative values are important but the W and mean should not generate negative values and upscale the output...
+also low W will upscale output if the weight is used to define the mean and will also upscale the output, must check data to observe the proper thing
+
+
+
+weight is used to make a patten
+though the issue will be with lower values that will generate high values with the squaring , this must be solved
+!!set values below zero to zero in order to prevent that?
+this will happen with the mean
+does the bias is used to offset the output or at some point internally and must they be absolute or relative offsets
+if the sum of the weights is used to divide on weighted input alone, this will give back the original data, 
+but if bias is included in the size this will normalize the effect of the weight and bias
+test with array of identical values must be done to ensure that everything is fine
+in the case of an identical array the values should not be zeros ( IF W is not the same value)
+the effect of W and the mean may give high value due to squared negative values or due to the W augmentation effect
+this need to be investigated more
+
+TODO:
+test univariate W and array
+implement flooring
+"""
 """    if convol:#may be totally useless
         if len(ashp)==3:
             W=W[::-1,::-1,::-1]
@@ -20,7 +44,7 @@ import numpy as np
 from math import ceil
 import itertools
 squa=1
-sqart=1
+sqart=0
 v=0
 sizz=1
 #https://docs.scipy.org/doc/numpy-1.10.0/reference/generated/numpy.apply_over_axes.html#numpy.apply_over_axes
@@ -69,24 +93,41 @@ def baseline(array,w,sqrt=False,square=True):
         hold=np.sqrt(hold)
     return((hold),mean,Input,temp)
 
-def vecvari10(array,W,B=None,sqrt=False,BB=1,verbose=False,BS=False,sizz=0,KCD=False,mulb=False,**kwargs):#shape of array must be the same as B
+def vecvari10(array,W,B=None,sqrt=False,BB=1,verbose=False,BS=False,sizz=0,
+              KCD=False,mulb=False,mul2=False,v3=0,**kwargs):#shape of array must be the same as B
     arrs=array.shape
     ashp=W.shape
+    dstp=arrs[0]-1 if not((arrs[0]-1)==0) else 1
     #array=np.expand_dims(array,len(array.shape)//2)
     if verbose:
+        print("VECVARI10:: B? {},SQRT {}, BB {}, BS {}, SIZZ {}, KCD {}, MULB {},  MUL2 {}".format(
+            not(B is None),bool(sqrt),bool(BB),bool(BS),sizz,bool(KCD),bool(mulb),bool(mul2)))
         print('arrayshape',arrs)
-        print('Wsample',W[0,0])
+        if verbose==2:
+            print('Wsample',W[:,:,-1,-1])
+        else:
+            print('Wsample',W[:,:,-1,-1])
+        if not(B is None):
+            print("Bsamp",B)
         print('wshape',ashp)
     xi=(-2,-1)
     x2=(-3,-2,-1)
+    if B is None:
+        B=np.zeros((1,1,1,1),dtype=np.float32)#channel
     #if len(ashp)==5 :#not all data and all weights == 3d data
     #    xi=(-3,-2,-1)
     #    x2=(-4,-3,-2,-1)
-    if mulb:
-        B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
-        mul=(array*W)+B
+    if v3:
+        if mulb:
+            mul=array+B
+        else:
+            mul=array
     else:
-        mul=array*W
+        if mulb:
+            B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
+            mul=(array*W)+B
+        else:
+            mul=array*W
     if not(B is None)and BB:
         size=(np.sum(W,axis=xi,keepdims=True)+np.sum(B,axis=xi[-len(B.shape):],keepdims=True))
     else:
@@ -94,7 +135,11 @@ def vecvari10(array,W,B=None,sqrt=False,BB=1,verbose=False,BS=False,sizz=0,KCD=F
         if B is None:
             B=np.zeros((ashp[1]))#channel
     if verbose:
-        print('sizsamp',size[0,0,0])
+        if verbose==2:
+            print('mulsamp',mul[:,-1,-1,::dstp],'arrsamp',array[-1,-1,:])
+        else:
+            print('mulsamp',mul[-1,-1,-1],'arrsamp',array[-1,-1,-1])
+        print('sizsamp',size)
         print('bbb',B.shape)
         print("size",size.shape)
         print('array',array.shape,'w',W.shape)
@@ -104,31 +149,70 @@ def vecvari10(array,W,B=None,sqrt=False,BB=1,verbose=False,BS=False,sizz=0,KCD=F
     else:
         mean=np.sum(mul,xi,keepdims=1)/np.broadcast_to([ashp[-2]*ashp[-1]],(3,1,1))
     if verbose:
-        print("meansamp",mean[-1,:,:,-1,-1,-1])
+        if verbose==2:
+            print("meanshp",mean.shape)
+            print("meansamp",mean[:,:,:,::dstp,-1,-1,-1])
+        else:
+            print("meansamp",mean[-1,:,:,-1,-1,-1,-1])
         print("etst",mean.shape)
-        print('size',size[0,0])
-        print("amean",(mul-mean)[-1,-1,-1])
+        if verbose==2:
+            print("ameanshp",(mul-mean).shape)
+            print("amean",(mul-mean)[:,:,:,::dstp,-1,-1])
+        else:
+            print("amean",(mul-mean)[-1,-1,-1])
     B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
-    if BB:
-        i=(np.square((mul)-mean)+B)/size#B could be included
+    if mul2:
+        if mulb:
+            mul=((array-mean)*W)+B
+           
+        else:
+            mul=((array-mean)*W)
+        i=np.square(mul)/size
     else:
-        i=(np.square((mul)-mean))/size
+        if v3==1:
+            if BB:
+                i=(np.square(((array-mean)*W)+B)/size)#B could be included
+            else:
+                i=(np.square(((array-mean)*W))/size)#B could be included
+        if v3==2:
+            if BB:
+                i=((np.square(array-mean)*W)+B)/size#B could be included
+            else:
+                i=((np.square(array-mean)*W))/size#B could be included
+        if v3==3:
+            if BB:
+                i=((np.square(array-mean)/size)*W)+B#B could be included
+            else:
+                i=((np.square(array-mean)/size)*W)#B could be included
+        else:
+            if BB:
+                i=(np.square((mul)-mean)+B)/size#B could be included
+            else:
+                i=(np.square((mul)-mean))/size
     if KCD:
         out=np.sum(i,axis=xi)
     else:
         out=np.rollaxis(np.sum(i,axis=x2),-1,1)
     if verbose:
-        print('ishape',i.shape)
-        print('isample',i[-1,-1,-1],i.dtype)
+        print('ishp',i.shape)
+        if verbose==2:
+            
+            print('isample',i[:,-1,-1,::dstp],i.dtype)
+        else:
+            print('isample',i[-1,-1,-1],i.dtype)
     if sqrt:
         out=np.sqrt(out)
     if verbose:
+        if verbose==2:
+            print('oushp',out.shape)
+            print("outsample",out[:,::dstp,-1,-1])
+        else:
+            print("outsample",out[-1,-1,-1])
         print("out",out.shape,(arrs[0],ashp[0],arrs[1],arrs[2]))
     if KCD:
         out=np.reshape(out,(arrs[0],ashp[0]*arrs[-3],arrs[1],arrs[2]))
     else:
         assert out.shape==(arrs[0],ashp[0],arrs[1],arrs[2])
-    
     if not(BB) and BS:
         B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
         return(out+B[:,0])
@@ -138,32 +222,52 @@ def vecvari10(array,W,B=None,sqrt=False,BB=1,verbose=False,BS=False,sizz=0,KCD=F
 
 ###data
 
-def vecvari1(array,W,B=None,sqrt=False,BB=False,BS=False,verbose=False,sizz=1,KCD=False,mulb=False,**kwargs):#shape of array must be the same as B
+def vecvari1(array,W,B=None,sqrt=False,BB=False,BS=False,verbose=False,sizz=1,
+             KCD=False,mulb=False,mul2=False,v3=0,**kwargs):#shape of array must be the same as B
     arrs=array.shape
     #array=np.expand_dims(array,len(array.shape)//2)
     ashp=W.shape
+    dstp=arrs[0]-1 if not((arrs[0]-1)==0) else 1
     if verbose:
+        print("VECVARI1:: B? {},SQRT {}, BB {}, BS {}, SIZZ {}, KCD {}, MULB {},  MUL2 {}".format(
+            not(B is None),bool(sqrt),bool(BB),bool(BS),sizz,bool(KCD),bool(mulb),bool(mul2)))
         print('arrayshape',arrs)
-        print('Wsample',W[0,0])
+        if verbose==2:
+            print('Wsample',W[:,:,-1,-1])
+        else:
+            print('Wsample',W[:,:,-1,-1])
+        if not(B is None):
+            print("Bsamp",B)
         print('wshape',ashp)
+    if B is None:
+        B=np.zeros((1,1,1,1),dtype=np.float32)#channel
     bt=len(B.shape)==2
     xi=(-2,-1)#xi=(-1,-2)
     x2=(-3,-2,-1)
     if len(ashp)==5 :#not all data and all weights == 3d data
         xi=(-3,-2,-1)
         x2=(-4,-3,-2,-1)
-    if mulb:
-        B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
-        mul=(array*W)+B
+    if v3:
+        if mulb:
+            mul=array+b
+        else:
+            mul=array
     else:
-        mul=array*W
+        if mulb:
+            B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
+            mul=(array*W)+B
+        else:
+            mul=array*W
     size=np.sum(W,axis=xi,keepdims=True)#shape=(outputs, channel)
-    if B is None:
-        B=np.zeros(ashp[0:2],dtype=np.float32)#channel
+
     if BB :
         B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
     if verbose:
-        print('sizsamp',size[0,0,0])
+        if verbose==2:
+            print('mulsamp',mul[:,-1,-1,::dstp],'arrsamp',array[-1,-1,:])
+        else:
+            print('mulsamp',mul[-1,-1,-1],'arrsamp',array[-1,-1,-1])
+        print('sizsamp',size)
         print('bbb',B.shape)
         print("size",size.shape)
     if sizz==1:
@@ -171,29 +275,69 @@ def vecvari1(array,W,B=None,sqrt=False,BB=False,BS=False,verbose=False,sizz=1,KC
     else:
         mean=np.sum((mul),axis=xi,keepdims=True)/np.broadcast_to([ashp[-2]*ashp[-1]],(ashp[1],1,1))
     if verbose:
-        print("meansamp",mean[-1,:,:,-1,-1,-1,-1])
+        if verbose==2:
+            print("meanshape",mean.shape)
+            print("meansamp",mean[:,:,:,::dstp,-1,-1,-1])
+        else:
+            print("meansamp",mean[-1,:,:,-1,-1,-1,-1])
         print("etst",mean.shape)
-        print("amean",(mul-mean)[-1,-1,-1])
-    if BB:
-        i=(np.square((mul)-mean)+B)/size
+        if verbose==2:
+            print("ameanshp",(mul-mean).shape)
+            print("amean",(mul-mean)[:,:,:,::dstp,-1,-1])
+        else:
+            print("amean",(mul-mean)[-1,-1,-1])
+    if mul2:
+        if mulb:
+            mul=((array-mean)*W)+B
+        else:
+            mul=((array-mean)*W)
+        i=(np.square(mul))/size
     else:
-        i=(np.square((mul)-mean))/size
+        if v3==1:
+            if BB:
+                i=(np.square(((array-mean)*W)+B)/size)#B could be included
+            else:
+                i=(np.square(((array-mean)*W))/size)#B could be included
+        if v3==2:
+            if BB:
+                i=((np.square(array-mean)*W)+B)/size#B could be included
+            else:
+                i=((np.square(array-mean)*W))/size#B could be included
+        if v3==3:
+            if BB:
+                i=((np.square(array-mean)/size)*W)+B#B could be included
+            else:
+                i=((np.square(array-mean)/size)*W)#B could be included
+        else:
+            if BB:
+                i=(np.square((mul)-mean)+B)/size
+            else:
+                i=(np.square((mul)-mean))/size
     if KCD:
         out=np.sum(i,axis=xi)
     else:
         out=np.rollaxis(np.sum(i,axis=x2),-1,1)
     if verbose:
         print(i.shape)
-        print('isample',i[-1,-1,-1],i.dtype)
+        if verbose==2:
+            print('ishp',i.shape)
+            print('isample',i[:,-1,-1,::dstp],i.dtype)
+        else:
+            print('isample',i[-1,-1,-1],i.dtype)
+        
     if sqrt:
         out=np.sqrt(out)
     if verbose:
-        print("out",out.shape,(arrs[0],ashp[0],arrs[-5],arrs[-4]))
+        if verbose==2:
+            print('oushp',out.shape)
+            print("outsample",out[:,::dstp,-1,-1])
+        else:
+            print("outsample",out[-1,-1,-1])
+        print("out",out.shape,(arrs[0],ashp[0],arrs[1],arrs[2]))
     if KCD:
         out=np.reshape(out,(arrs[0],ashp[0]*arrs[-3],arrs[1],arrs[2]))
     else:
         assert out.shape==(arrs[0],ashp[0],arrs[1],arrs[2])
-        
     if not(BB)and BS:
         B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
         return(out+B[:,0])
@@ -258,13 +402,13 @@ BASE,MEAN,INP,iBASE=baseline(inputest, w11,square=squa,sqrt=sqart)
 
 
 if __name__=='__main__':
-    p=vecvari1(inputcols, wid, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=sizz)
-    d=vecvari10(inputcols, wid, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=sizz)
+    p=vecvari1(inputcols, wid, B=b0[:1],sqrt=sqart,verbose=2,sizz=sizz)
+    d=vecvari10(inputcols, wid, B=b0[:1],sqrt=sqart,verbose=2,sizz=sizz)
     #test with weights all set to 1
-    p20=vecvari1(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=0)
-    d20=vecvari10(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=0)
-    p21=vecvari1(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=1)
-    d21=vecvari10(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=1)
+    p20=vecvari1(inputcols, w11, B=b0[:1],sqrt=sqart,verbose=v,sizz=0)
+    d20=vecvari10(inputcols, w11, B=b0[:1],sqrt=sqart,verbose=v,sizz=0)
+    p21=vecvari1(inputcols, w11, B=b0[:1],sqrt=sqart,verbose=v,sizz=1)
+    d21=vecvari10(inputcols, w11, B=b0[:1],sqrt=sqart,verbose=v,sizz=1)
     compar1=0
     if compar1:
         print('#'*32)
@@ -317,6 +461,14 @@ if __name__=='__main__':
     t2=vecvari10(inputcols, wid, B=b0[:1],square=squa,sqrt=sqart,verbose=0,sizz=2,KCD=1)
     t3=vecvari1(inputcols, wid, B=b0[:1], sqrt=sqart, square=squa, verbose=0, sizz=0, KCD=1)
     print(t1-t2)
+    for vv in [0,1,2,3]:
+        for SZ in [0,1]:
+            for B in [0,1]:
+                k=vecvari10(inputcols, wid, B=b0[:1],sqrt=sqart,BB=B,verbose=0,sizz=SZ,KCD=0,v3=vv)
+                u=vecvari1(inputcols, wid, B=b0[:1], sqrt=sqart,BB=B, verbose=0, sizz=SZ, KCD=0,v3=vv)
+                print(k[-1,-1], "vec10 v3: {}, sizz:{}, BB:{}".format(vv,SZ,B))
+                print(u[-1,-1],"vec1 v3: {}, sizz:{}, BB:{}".format(vv,SZ,B))
+
     #print(p1.mean(),p1.max(),p1.min())
     #print(d1.mean(),d1.max(),d1.min())
     #print(INP.shape,inputcols.shape)
@@ -414,7 +566,7 @@ def vecvari2(array,W,B=None,sizer='',sqrt=False,square=False,mean=None,noB=False
     if verbose:
         print('bbb',B.shape)
         print("size",size.shape)
-        print('sizesamp',size[0,0])
+        print('sizesamp',size)
     if verbose:
         print('array',array.shape,'w',W.shape)
     mean=np.tensordot(array,W/size,axes=(xi,xi))#mean?
@@ -543,3 +695,96 @@ def vecvari20(array,W,B=None,sizer='',sqrt=False,square=False,mean=None,noB=Fals
         print('outhspa???',arrs[0],ashp[0],arrs[-2],arrs[-1])
     assert out.shape==(arrs[0],ashp[0],arrs[-2],arrs[-1])
     return(out)
+
+def vecvari10B(array,W,B=None,sqrt=False,BB=1,verbose=False,BS=False,sizz=0,
+              KCD=False,mulb=False,mul2=False,**kwargs):#shape of array must be the same as B
+    arrs,ashp=array.shape,W.shape
+    xi,x2=(-2,-1),(-3,-2,-1)
+    if mulb:
+        B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
+        mul=(array*W)+B
+    else:
+        mul=array*W
+    if not(B is None)and BB:
+        size=(np.sum(W,axis=xi,keepdims=True)+np.sum(B,axis=xi[-len(B.shape):],keepdims=True))
+    else:
+        size=np.sum(W,axis=xi,keepdims=True)#shape=(outputs, channel)
+        if B is None:
+            B=np.zeros((ashp[1]))#channel
+    if sizz==1:
+        mean=np.sum(mul,xi,keepdims=1)/size
+    else:
+        mean=np.sum(mul,xi,keepdims=1)/np.broadcast_to([ashp[-2]*ashp[-1]],(3,1,1))
+    B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
+    if mul2:
+        if mulb:
+            mul=((array-mean)*W)+B
+           
+        else:
+            mul=((array-mean)*W)
+        i=np.square(mul)/size
+    else:
+        if BB:
+            i=(np.square((mul)-mean)+B)/size#B could be included
+        else:
+            i=(np.square((mul)-mean))/size
+    if KCD:
+        out=np.sum(i,axis=xi)
+    else:
+        out=np.rollaxis(np.sum(i,axis=x2),-1,1)
+    if sqrt:
+        out=np.sqrt(out)
+    if KCD:
+        out=np.reshape(out,(arrs[0],ashp[0]*arrs[-3],arrs[1],arrs[2]))
+    if not(BB) and BS:
+        B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
+        return(out+B[:,0])
+    else:
+        return(out)
+
+
+###data
+
+def vecvari1B(array,W,B=None,sqrt=False,BB=False,BS=False,verbose=False,sizz=1,
+             KCD=False,mulb=False,mul2=False,**kwargs):#shape of array must be the same as B
+    arrs,ashp=array.shape,W.shape
+    bt=len(B.shape)==2
+    xi,x2=(-2,-1),(-3,-2,-1)
+    if mulb:
+        B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
+        mul=(array*W)+B
+    else:
+        mul=array*W
+    size=np.sum(W,axis=xi,keepdims=True)#shape=(outputs, channel)
+    if B is None:
+        B=np.zeros(ashp[0:2],dtype=np.float32)#channel
+    if BB :
+        B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
+    if sizz==1:
+        mean=np.sum((mul),axis=xi,keepdims=True)/size
+    else:
+        mean=np.sum((mul),axis=xi,keepdims=True)/np.broadcast_to([ashp[-2]*ashp[-1]],(ashp[1],1,1))
+    if mul2:
+        if mulb:
+            mul=((array-mean)*W)+B
+        else:
+            mul=((array-mean)*W)
+        i=(np.square(mul))/size
+    else:
+        if BB:
+            i=(np.square((mul)-mean)+B)/size
+        else:
+            i=(np.square((mul)-mean))/size
+    if KCD:
+        out=np.sum(i,axis=xi)
+    else:
+        out=np.rollaxis(np.sum(i,axis=x2),-1,1)
+    if sqrt:
+        out=np.sqrt(out)
+    if KCD:
+        out=np.reshape(out,(arrs[0],ashp[0]*arrs[-3],arrs[1],arrs[2]))
+    if not(BB)and BS:
+        B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
+        return(out+B[:,0])
+    else:
+        return(out)
