@@ -55,7 +55,7 @@ def plotvars(BB,short=False,Nob=False,bx=bx):
     outputs={1:cpy(indict),2:cpy(indict),3:cpy(indict)}
     axs=(0,-2,-1)
     ding=0
-    BD="Weight -" if BB==1 else "Bias -"
+    BD="Weight -" if BB==0 else "Bias -"
     hol=[WAR,bs][BB]
     if short:#subsample data
         for bb in hol:#bb are upscaled 5 times
