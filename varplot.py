@@ -8,11 +8,10 @@ from copy import deepcopy as cpy
 bs=list()
 bxx=[]
 WAR=[]
-scaleW=0
-numout=5
+scaleW=1# use the bias scaling method on the weight instead of bseed
+numout=5#number of output per pass, do not change
 bseed=[0.00005,0.0001,0.0005,0.001,0.005,0.01,0.05,0.1,0.5,1,5,10,25,50,75,100,250,500,750,1000,5000]
 for B in bseed:
-    bxx=[]
     if scaleW:
         e=[1,2,3,4,5]
         custW=np.broadcast_to(np.array([B],dtype=np.float32), shape=(5,3,3,3))
@@ -31,6 +30,7 @@ for I in bseed:
     ba1=np.broadcast_to(np.array([I]),(1,3,1,1))
     bs.append(ba1*e)
     [bx.append(O) for O in np.reshape(bax*e,(5,)).tolist()]
+
 #bxa=np.array(bx)
 #print(WAR[0].shape,WAR[0])
 #print(bs[0].shape,bs[0])
@@ -45,18 +45,23 @@ indict={'mean':[],'max':[],'min':[],'1mean':[],'1max':[],'1min':[],'2mean':[],'2
 outputs={1:cpy(indict),2:cpy(indict),3:cpy(indict)}
 sizz=(0,0)
 wid=np.broadcast_to(wid, (numout,*wid.shape[1:]))
-sqrtv=0
-mulbv=0
-mul2v=1#
-v3v=0
+sqrtv=0#square root output?
+mulbv=0#use mulb 1
+mul2v=1# use mul2
+v3v=0#value of the v3 alg
 bsvi=-1#9
 print(len(bs),bs[0])
-def plotvars(BB,short=False,Nob=False,bx=bx):
+def plotvars(BB,Wi=None,short=False,Nob=False,bx=bx,mode="save",formatf=["pdf","svg","pgn"][0]):
     outputs={1:cpy(indict),2:cpy(indict),3:cpy(indict)}
     axs=(0,-2,-1)
-    ding=0
-    BD="Weight -" if BB==0 else "Bias -"
     hol=[WAR,bs][BB]
+    WV = wid if (Wi is None) else WAR[Wi]
+    ding=0
+    BS= np.array(hol) if BB==1 else bs[bsvi]
+    if BB==0:
+        WS=np.array(hol)
+
+    BD="{}Weight_{}".format(np.unique(WS).shape[0], "no-B_" if No_B else " {}B({})_".format(np.unique(BS).shape[0]),bsvi) if BB==0 else "{}Bias_{}W({})_".format(np.unique(BS).shape[0],np.unique(WV).shape[0],Wi if not(Wi is None) else "wid")
     if short:#subsample data
         for bb in hol:#bb are upscaled 5 times
             #print(bb)
@@ -65,12 +70,12 @@ def plotvars(BB,short=False,Nob=False,bx=bx):
                 print('W',wid,'W')
                 print('B',bb,'B')
                 #print(wid.shape,bb.shape)
-                d1=vecvari10(inputcols, wid,BB=0, B=bb,sqrt=sqrtv,verbose=0,mulb=mulbv,mul2=mul2v,sizz=sizz[0],v3=v3v)
-                d2=vecvari10(inputcols, wid,BB=1, B=bb,sqrt=sqrtv,verbose=0,mulb=mulbv,mul2=mul2v,sizz=sizz[0],v3=v3v)
-                d3=vecvari10(inputcols, wid,BB=0,BS=1, B=bb,sqrt=sqrtv,verbose=0,mulb=mulbv,mul2=mul2v,sizz=sizz[0],v3=v3v)#-vecvari10(inputcols, wid,noB=0, B=bb,square=0,sqrt=0,verbose=0)
-                p1=vecvari1(inputcols, wid, B=bb,BB=0,sqrt=sqrtv,verbose=0,mulb=mulbv,mul2=mul2v,sizz=sizz[1],v3=v3v)
-                p2=vecvari1(inputcols, wid, B=bb,BB=1,sqrt=sqrtv,verbose=0,mulb=mulbv,mul2=mul2v,sizz=sizz[1],v3=v3v)
-                p3=vecvari1(inputcols, wid, B=bb,BB=0,BS=1,sqrt=sqrtv,verbose=0,mulb=mulbv,mul2=mul2v,sizz=sizz[1],v3=v3v)
+                d1=vecvari10(inputcols, WV,BB=0, B=bb,sqrt=sqrtv,verbose=0,mulb=mulbv,mul2=mul2v,sizz=sizz[0],v3=v3v)
+                d2=vecvari10(inputcols, WV,BB=1, B=bb,sqrt=sqrtv,verbose=0,mulb=mulbv,mul2=mul2v,sizz=sizz[0],v3=v3v)
+                d3=vecvari10(inputcols, WV,BB=0,BS=1, B=bb,sqrt=sqrtv,verbose=0,mulb=mulbv,mul2=mul2v,sizz=sizz[0],v3=v3v)#-vecvari10(inputcols, wid,noB=0, B=bb,square=0,sqrt=0,verbose=0)
+                p1=vecvari1(inputcols, WV, B=bb,BB=0,sqrt=sqrtv,verbose=0,mulb=mulbv,mul2=mul2v,sizz=sizz[1],v3=v3v)
+                p2=vecvari1(inputcols, WV, B=bb,BB=1,sqrt=sqrtv,verbose=0,mulb=mulbv,mul2=mul2v,sizz=sizz[1],v3=v3v)
+                p3=vecvari1(inputcols, WV, B=bb,BB=0,BS=1,sqrt=sqrtv,verbose=0,mulb=mulbv,mul2=mul2v,sizz=sizz[1],v3=v3v)
             elif BB==0:
                 if Nob:
                     bval=None
@@ -153,16 +158,16 @@ def plotvars(BB,short=False,Nob=False,bx=bx):
                     outputs[iou]['max'].append(out3.max())
                     outputs[iou]['min'].append(out3.min())
     #bx=bxx#np.linspace(0, bxx[-1], num=outputs[1]['mean'].__len__(),  dtype=np.float32)
-    print(ding,(np.array(outputs[1]['mean']),np.array(outputs[2]['mean'])))
+    #print(ding,(np.array(outputs[1]['mean']),np.array(outputs[2]['mean'])))
     #print([outputs[d]['min'] for d in outputs ])
-    tree=1
-    ylog=[1,1,0]
+    tree=1#tree plots instead of one
+    ylog=[1,1,0]#set wich plot to have the y axes as a log
     coloros=["xkcd:racing green","xkcd:bright pink","xkcd:raw umber",
              "xkcd:bright orange", "xkcd:barney purple","xkcd:light green",
              "xkcd:piss yellow","xkcd:bright aqua","xkcd:fire engine red",]
-    markers=['+--','*--','x-']
-    mks=[8,6,6]
-    ALPH=0.58
+    markers=['+--','*--','x-']#markers for each group of plot
+    mks=[8,6,6]#size of the markers
+    ALPH=0.58#alpha of the plot
     if tree: #tree plots
         fig, axs = plt.subplots(3, 1)
         #fig.set_xscale('log')
@@ -209,7 +214,7 @@ def plotvars(BB,short=False,Nob=False,bx=bx):
         plt.plot(bx,f3y['max'],markers[2],color=coloros[7],markersize=mks[2],alpha=ALPH,)
         plt.plot(bx,f3y['min'],markers[2],color=coloros[8],markersize=mks[2],alpha=ALPH,)
         plt.setp(f3.set_xscale('log'))
-        plt.setp(f3.set_title('{},vecvari10-vecvari1,V3:{},sizz:{},mulb:{},mul2v:{}'.format(BD,sv3v,sizz,mulbv,mul2v)))
+        plt.setp(f3.set_title('{},vecvari10-vecvari1,V3:{},sizz:{},mulb:{},mul2v:{}'.format(BD,v3v,sizz,mulbv,mul2v)))
         if ylog[2]:
             plt.setp(f3.set_yscale('log'))
     else: #all in one plot
@@ -238,12 +243,20 @@ def plotvars(BB,short=False,Nob=False,bx=bx):
                bbox_to_anchor=(0,0,1,0), loc=2,
                ncol=3, mode="expand", borderaxespad=0.5) 
     #https://matplotlib.org/users/legend_guide.html
-    plt.show()
+    if mode=="save":
+        outf=".//varplots//{}siz{}_ml{}_ml2{}_v3{}_rt{}.{}".format(BD,sizz,mulbv,mul2v,v3v,sqrtv,formatf)
+        print(outf)
+        plt.savefig(outf,format=formatf)
+        #exit()
+    else:
+        plt.show()
 plots=1
-V3=0
+V3=1#test v3 architecture
 No_B=0
 shortrun=1
 BBB=1 # 1 = test B, 0 = test W
+Wiv=0
+modee=["save","plot"][0]
 if plots:
     for mu2 in (0,1):
         mul2v=mu2
@@ -254,14 +267,15 @@ if plots:
                 if V3:
                     for V in [0,1,2,3]:
                         v3v=V
-                        plotvars(BBB,short=shortrun,Nob=No_B)
+                        plotvars(BBB,Wi=Wiv,short=shortrun,Nob=No_B,mode=modee)
                 else:    
-                    plotvars(BBB,short=shortrun,Nob=No_B)
-bdx=-1
-wdx=0
+                    plotvars(BBB,Wi=Wiv,short=shortrun,Nob=No_B,mode=modee)
+bdx=-1#index for static bias
+wdx=0#index for static weight
 mbb=1
 alg=[vecvari10,vecvari1]
-multprint=1
+multprint=0
+verbplot=1
 sidechec=True
 """tocheck:
 W:
@@ -274,32 +288,32 @@ mulb soften sizz0
 sizz1,mulb0,b[0],b[-1]
 vec10 est + uniform sauf pout bb1,
 vec1 est similaire et + disperse"""
-
-if No_B:
-    bval=None
-else:
-    bval=bs[bdx]
-    print(bs[bdx])
-if multprint:
-    for STPG in [(0,0),(1,0),(1,1)]:#sizz,mulb value pair
-        for STP in [(0,0),(1,0),(1,0)]:#bb,bs value pair
-            for X in [1,-2]:#W/b index
-                if sidechec:
-                    for stp in [-1,0]:#side step
-                        x2=X+X%2+stp
-                        if BBB==0:#test weight
-                            alg[0](inputcols, WAR[x2],BB=STP[0],BS=STP[1], B=bval,sqrt=sqrtv,verbose=2,mulb=STPG[1],sizz=STPG[0],mul2=mul2v,)
-                        elif BBB==1:
-                            alg[0](inputcols, wid,BB=STP[0],BS=STP[1], B=bs[x2],sqrt=sqrtv,mul2=mul2v,verbose=2,mulb=STPG[1],sizz=STPG[0])
-                if BBB==0:
-                    alg[0](inputcols, WAR[X],BB=STP[0],BS=STP[1], B=bval,sqrt=sqrtv,verbose=2,mulb=STPG[1],sizz=STPG[0],mul2=mul2v,)
-                elif BBB==1:
-                    alg[0](inputcols, wid,BB=STP[0],BS=STP[1], B=bs[X],sqrt=sqrtv,mul2=mul2v,verbose=2,mulb=STPG[1],sizz=STPG[0])
-else:              
-    if BBB==0:
-        print("b",bs[bdx],"b")
-        vecvari10(inputcols, WAR[wdx],BB=1,BS=0, B=bval,sqrt=sqrtv,mul2=mul2v,verbose=2,mulb=mbb,sizz=1)
-        vecvari1(inputcols, WAR[wdx],BB=1,BS=0, B=bval,sqrt=sqrtv,mul2=mul2v,verbose=2,mulb=mbb,sizz=1)
-    elif BBB==1:
-        vecvari10(inputcols, wid,BB=1,BS=0, B=bs[bdx],sqrt=sqrtv,mul2=mul2v,verbose=2,mulb=mbb,sizz=1)
-        vecvari1(inputcols, wid,BB=1,BS=0, B=bs[bdx],sqrt=sqrtv,mul2=mul2v,verbose=2,mulb=mbb,sizz=1)
+if verbplot:
+    if No_B:
+        bval=None
+    else:
+        bval=bs[bdx]
+        print(bs[bdx])
+    if multprint:
+        for STPG in [(0,0),(1,0),(1,1)]:#sizz,mulb value pair
+            for STP in [(0,0),(1,0),(1,0)]:#bb,bs value pair
+                for X in [1,-2]:#W/b index
+                    if sidechec:
+                        for stp in [-1,0]:#side step
+                            x2=X+X%2+stp
+                            if BBB==0:#test weight
+                                alg[0](inputcols, WAR[x2],BB=STP[0],BS=STP[1], B=bval,sqrt=sqrtv,verbose=2,mulb=STPG[1],sizz=STPG[0],mul2=mul2v,)
+                            elif BBB==1:
+                                alg[0](inputcols, wid,BB=STP[0],BS=STP[1], B=bs[x2],sqrt=sqrtv,mul2=mul2v,verbose=2,mulb=STPG[1],sizz=STPG[0])
+                    if BBB==0:
+                        alg[0](inputcols, WAR[X],BB=STP[0],BS=STP[1], B=bval,sqrt=sqrtv,verbose=2,mulb=STPG[1],sizz=STPG[0],mul2=mul2v,)
+                    elif BBB==1:
+                        alg[0](inputcols, wid,BB=STP[0],BS=STP[1], B=bs[X],sqrt=sqrtv,mul2=mul2v,verbose=2,mulb=STPG[1],sizz=STPG[0])
+    else:              
+        if BBB==0:
+            print("b",bs[bdx],"b")
+            vecvari10(inputcols, WAR[wdx],BB=1,BS=0, B=bval,sqrt=sqrtv,mul2=mul2v,verbose=2,mulb=mbb,sizz=1)
+            vecvari1(inputcols, WAR[wdx],BB=1,BS=0, B=bval,sqrt=sqrtv,mul2=mul2v,verbose=2,mulb=mbb,sizz=1)
+        elif BBB==1:
+            vecvari10(inputcols, wid,BB=1,BS=0, B=bs[bdx],sqrt=sqrtv,mul2=mul2v,verbose=2,mulb=mbb,sizz=1)
+            vecvari1(inputcols, wid,BB=1,BS=0, B=bs[bdx],sqrt=sqrtv,mul2=mul2v,verbose=2,mulb=mbb,sizz=1)

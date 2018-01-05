@@ -249,7 +249,7 @@ def vecvari1(array,W,B=None,sqrt=False,BB=False,BS=False,verbose=False,sizz=1,
         x2=(-4,-3,-2,-1)
     if v3:
         if mulb:
-            mul=array+b
+            mul=array+B
         else:
             mul=array
     else:
@@ -455,6 +455,11 @@ if __name__=='__main__':
     print((vecvari1(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=0)-vecvari1(inputcols, w11, B=b0[:1],square=squa,sqrt=sqart,verbose=v,sizz=1))[-1,-1],'test sizz W11')
     #p1=p-BASE
     #d1=d-BASE
+    plchold=np.broadcast_to(np.array([100]), inputcols.shape)
+    wt=[wid,w11]
+    wi=0
+    print("null 10 ?",vecvari10(plchold, wt[wi],sizz=0),"null 10 ?")
+    print("null 1 ?",vecvari1(plchold,wt[wi],verbose=0,sizz=0),"null 1 ?")
     print(BASE[-1,-1],'target?')
     print(inputcols.shape)
     t1=vecvari10(inputcols, wid, B=b0[:1],square=squa,sqrt=sqart,verbose=0,sizz=3,KCD=1)
@@ -468,6 +473,7 @@ if __name__=='__main__':
                 u=vecvari1(inputcols, wid, B=b0[:1], sqrt=sqart,BB=B, verbose=0, sizz=SZ, KCD=0,v3=vv)
                 print(k[-1,-1], "vec10 v3: {}, sizz:{}, BB:{}".format(vv,SZ,B))
                 print(u[-1,-1],"vec1 v3: {}, sizz:{}, BB:{}".format(vv,SZ,B))
+    print('DONE')
 
     #print(p1.mean(),p1.max(),p1.min())
     #print(d1.mean(),d1.max(),d1.min())
