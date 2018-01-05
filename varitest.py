@@ -45,7 +45,25 @@ def baseline(array,w,sqrt=False,square=True):# used to compare the outpout of th
     return((hold),mean,Input,temp)
 
 def vecvari10(array,W,B=None,sqrt=False,BB=1,verbose=False,BS=False,sizz=0,
-              KCD=False,mulb=False,mul2=False,v3=0,**kwargs):#shape of array must be the same as B
+              KCD=False,mulb=False,mul2=False,v3=0,**kwargs):
+    """
+    vecvari10 adds the bias to the "size"
+    params:
+        array(array): input data
+        W(array): weights
+        B(array): bias
+        sqrt(bool): apply square root to the output
+        BB(bool):apply the bias to the data before the final division
+        BS(bool): apply the bias only to the output
+        verbose[0,1,2]: print interim data for diagnosis
+        sizz(bool): use the sum of the weights as the size
+        KCD(bool): keep channel data, i.e.: does not sum the channel axis, output is more massive though
+        mulb(bool): add the bias to the "mul" variable
+        mul2(bool): multiply the result of (array-mean) rather than (array*W)-mean
+        v3[0,1,2,3]:alternative ways to calculate the variance
+        **kwargs: just a way to prevent error with function changes
+        
+    """
     arrs=array.shape
     ashp=W.shape
     dstp=arrs[0]-1 if not((arrs[0]-1)==0) else 1
@@ -122,22 +140,22 @@ def vecvari10(array,W,B=None,sqrt=False,BB=1,verbose=False,BS=False,sizz=0,
     else:
         if v3==1:
             if BB:
-                i=(np.square(((array-mean)*W)+B)/size)#B could be included
+                i=(np.square(((array-mean)*W)+B)/size)
             else:
                 i=(np.square(((array-mean)*W))/size)#B could be included
         if v3==2:#not a good idea
             if BB:
-                i=((np.square(array-mean)*W)+B)/size#B could be included
+                i=((np.square(array-mean)*W)+B)/size
             else:
                 i=((np.square(array-mean)*W))/size#B could be included
         if v3==3:
             if BB:
-                i=((np.square(array-mean)/size)*W)+B#B could be included
+                i=((np.square(array-mean)/size)*W)+B
             else:
                 i=((np.square(array-mean)/size)*W)#B could be included
         else:
             if BB:
-                i=(np.square((mul)-mean)+B)/size#B could be included
+                i=(np.square((mul)-mean)+B)/size
             else:
                 i=(np.square((mul)-mean))/size
     if KCD:
@@ -173,7 +191,26 @@ def vecvari10(array,W,B=None,sqrt=False,BB=1,verbose=False,BS=False,sizz=0,
 
 
 def vecvari1(array,W,B=None,sqrt=False,BB=False,BS=False,verbose=False,sizz=1,
-             KCD=False,mulb=False,mul2=False,v3=0,**kwargs):#shape of array must be the same as B
+             KCD=False,mulb=False,mul2=False,v3=0,**kwargs):
+    """
+    vecvari1 does not care about the bias when calculating the "size"
+    params:
+        array(array): input data
+        W(array): weights
+        B(array): bias
+        sqrt(bool): apply square root to the output
+        BB(bool):apply the bias to the data before the final division
+        BS(bool): apply the bias only to the output
+        verbose[0,1,2]: print interim data for diagnosis
+        sizz(bool): use the sum of the weights as the size
+        KCD(bool): keep channel data, i.e.: does not sum the channel axis, output is more massive though
+        mulb(bool): add the bias to the "mul" variable
+        mul2(bool): multiply the result of (array-mean) rather than (array*W)-mean
+        v3[0,1,2,3]:alternative ways to calculate the variance
+        **kwargs: just a way to prevent error with function changes
+        
+    """
+    
     arrs=array.shape
     #array=np.expand_dims(array,len(array.shape)//2)
     ashp=W.shape
