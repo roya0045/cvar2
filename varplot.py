@@ -60,8 +60,9 @@ def plotvars(BB,Wi=None,short=False,Nob=False,bx=bx,mode="save",formatf=["pdf","
     BS= np.array(hol) if BB==1 else bs[bsvi]
     if BB==0:
         WS=np.array(hol)
-
-    BD="{}Weight_{}".format(np.unique(WS).shape[0], "no-B_" if No_B else " {}B({})_".format(np.unique(BS).shape[0]),bsvi) if BB==0 else "{}Bias_{}W({})_".format(np.unique(BS).shape[0],np.unique(WV).shape[0],Wi if not(Wi is None) else "wid")
+    wu=np.unique(WS).shape[0]
+    bu=np.unique(BS).shape[0]
+    BD="{}Weight_{}".format(wu, "no-B_" if No_B else " {}B({})_".format(bu,bsvi)) if BB==0 else "{}Bias_{}W({})_".format(bu,wu,Wi if not(Wi is None) else "wid")
     if short:#subsample data
         for bb in hol:#bb are upscaled 5 times
             #print(bb)
@@ -254,7 +255,7 @@ plots=1
 V3=1#test v3 architecture
 No_B=0
 shortrun=1
-BBB=1 # 1 = test B, 0 = test W
+BBB=0 # 1 = test B, 0 = test W
 Wiv=0
 modee=["save","plot"][0]
 if plots:
