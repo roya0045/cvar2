@@ -22,4 +22,4 @@ Current setup under considerations:
 * sizz:0,mul2:1,v3:not(0)* 
 * sizz:1,mul2:1,v3:0 
 
-* *v3[1,2,3] doesn't matter if mul2 is True, v3 only need to be also true
+*v3[1,2,3] doesn't matter if mul2 is True, v3 only need to be also true
