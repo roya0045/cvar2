@@ -9,41 +9,102 @@ sqart=0
 v=0
 sizz=1
 
-
-def baseline(array,w,sqrt=False,square=True):# used to compare the outpout of the algorithms
-    def inter(a):
-        am=a.mean()
-        asiz=len(a.flatten())
-        if square:
-            av=np.sum(np.square(a-am))/asiz
+#current alg, need to compare the mathematical equivalence between the i with and without mul2
+def vecvari(array,W,B=None,sqrt=False,verbose=False,KCD=False,mul2=False,**kwargs):
+    """vecvari10 adds the bias to the "size"
+    params:
+        array(array): input data
+        W(array): weights
+        B(array): bias
+        sqrt(bool): apply square root to the output
+        verbose[0,1,2]: print interim data for diagnosis
+        KCD(bool): keep channel data, i.e.: does not sum the channel axis, output is more massive though
+        mul2(bool): multiply the result of (array-mean) rather than (array*W)-mean
+        **kwargs: just a way to prevent error with function changes 
+    """
+    arrs=array.shape
+    ashp=W.shape
+    dstp=arrs[0]-1 if not((arrs[0]-1)==0) else 1
+    #array=np.expand_dims(array,len(array.shape)//2)
+    if verbose:
+        print("VECVARI10:: B? {},SQRT {}, SIZZ {}, KCD {},  MUL2 {}".format(
+            not(B is None),bool(sqrt),sizz,bool(KCD),bool(mul2)))
+        print('arrayshape',arrs)
+        if verbose==2:
+            print('Wsample',W[:,:,-1,-1])
         else:
-            av=np.sum(a-am)/asiz
-        return (av)
-    wsh=w.shape
-    def ameanalg(a):
-        return(a-a.mean())
-    print(wsh)
-    ash=array.shape
-    hold=np.empty((ash[0],wsh[0],ash[-2]-2,ash[-1]-2),dtype=np.float32)
-    mean=np.empty((ash[0],ash[1],ash[-2]-2,ash[-1]-2),dtype=np.float32)
-    Input=np.empty((ash[0],ash[-2]-2,ash[-1]-2,ash[1],3,3),dtype=np.float32)
-    for ixm,img in enumerate(array):
-        for co in range(wsh[0]):
-            temp=np.empty((wsh[1],ash[-2]-2,ash[-1]-2),dtype=np.float32)
-            for chnl in range(wsh[1]):
-                for col in range(ash[-2]-2):
-                    for row in range(ash[-1]-2):
-                        #intim=img[chnl,col:col+wsh[-2],row:row+wsh[-1]]
-                        #print(intim.shape)
-                        temp[chnl,col,row]=inter(img[chnl,col:col+wsh[-2],row:row+wsh[-1]])
-                        if co==0 :
-                            Input[ixm,col,row,chnl]=img[chnl,col:col+wsh[-2],row:row+wsh[-1]]
-                            mean[ixm,chnl,col,row]=img[chnl,col:col+wsh[-2],row:row+wsh[-1]].mean()
-            hold[ixm,co]=np.sum(temp,axis=0)
+            print('Wsample',W[:,:,-1,-1])
+        if not(B is None):
+            print("Bsamp",B)
+        print('wshape',ashp)
+    xi=(-2,-1)
+    x2=(-3,-2,-1)
+    if B is None:
+        if KCD:
+            B=np.zeros(ashp[:2],dtype=np.float32)
+        else:
+            B=np.zeros((1,1,1,1),dtype=np.float32)#channel
+    mul=array*W
+    size=np.sum(W,axis=xi,keepdims=True)#shape=(outputs, channel)
+    if verbose:
+        if verbose==2:
+            print('mulsamp',mul[:,-1,-1,::dstp],'arrsamp',array[-1,-1,:])
+        else:
+            print('mulsamp',mul[-1,-1,-1],'arrsamp',array[-1,-1,-1])
+        print('sizsamp',size)
+        print('bbb',B.shape)
+        print("size",size.shape)
+        print('array',array.shape,'w',W.shape)
+    ######################################
+    mean=np.sum(mul,xi,keepdims=1)/np.broadcast_to([ashp[-2]*ashp[-1]],(3,1,1))
+    if verbose:
+        if verbose==2:
+            print("meanshp",mean.shape)
+            print("meansamp",mean[:,:,:,::dstp,-1,-1,-1])
+        else:
+            print("meansamp",mean[-1,:,:,-1,-1,-1,-1])
+        print("etst",mean.shape)
+        if verbose==2:
+            print("ameanshp",(mul-mean).shape)
+            print("amean",(mul-mean)[:,:,:,::dstp,-1,-1])
+        else:
+            print("amean",(mul-mean)[-1,-1,-1])
+    if mul2:
+        mul=((array-mean)*W)
+        i=np.square(mul)/size
+    else:
+        i=(np.square((mul)-mean))/size
+    if KCD:
+        out=np.sum(i,axis=xi)
+    else:
+        out=np.rollaxis(np.sum(i,axis=x2),-1,1)
+    if verbose:
+        print('ishp',i.shape)
+        if verbose==2:
+            print('isample',i[:,-1,-1,::dstp],i.dtype)
+        else:
+            print('isample',i[-1,-1,-1],i.dtype)
     if sqrt:
-        hold=np.sqrt(hold)
-    return((hold),mean,Input,temp)
-
+        out=np.sqrt(out)
+    if verbose:
+        if verbose==2:
+            print('oushp',out.shape)
+            print("outsample",out[:,::dstp,-1,-1])
+        else:
+            print("outsample",out[-1,-1,-1])
+    print("out",out.shape,(arrs[0],ashp[0],arrs[1],arrs[2]))
+    if KCD:
+        out=out+B
+        out=np.reshape(out,(arrs[0],ashp[0]*arrs[-3],arrs[1],arrs[2]))
+        print(out.shape)
+        return(out)
+    else:
+        assert out.shape==(arrs[0],ashp[0],arrs[1],arrs[2])
+        B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
+        return(out+B[:,0])
+    
+    
+#backups
 def vecvari10(array,W,B=None,sqrt=False,BB=1,verbose=False,BS=False,sizz=0,
               KCD=False,mulb=False,mul2=False,v3=0,**kwargs):
     """
@@ -330,7 +391,40 @@ def vecvari1(array,W,B=None,sqrt=False,BB=False,BS=False,verbose=False,sizz=1,
     else:
         return(out)
 
-
+#test baseline for w=np.ones(..)
+def baseline(array,w,sqrt=False,square=True):# used to compare the outpout of the algorithms
+    def inter(a):
+        am=a.mean()
+        asiz=len(a.flatten())
+        if square:
+            av=np.sum(np.square(a-am))/asiz
+        else:
+            av=np.sum(a-am)/asiz
+        return (av)
+    wsh=w.shape
+    def ameanalg(a):
+        return(a-a.mean())
+    print(wsh)
+    ash=array.shape
+    hold=np.empty((ash[0],wsh[0],ash[-2]-2,ash[-1]-2),dtype=np.float32)
+    mean=np.empty((ash[0],ash[1],ash[-2]-2,ash[-1]-2),dtype=np.float32)
+    Input=np.empty((ash[0],ash[-2]-2,ash[-1]-2,ash[1],3,3),dtype=np.float32)
+    for ixm,img in enumerate(array):
+        for co in range(wsh[0]):
+            temp=np.empty((wsh[1],ash[-2]-2,ash[-1]-2),dtype=np.float32)
+            for chnl in range(wsh[1]):
+                for col in range(ash[-2]-2):
+                    for row in range(ash[-1]-2):
+                        #intim=img[chnl,col:col+wsh[-2],row:row+wsh[-1]]
+                        #print(intim.shape)
+                        temp[chnl,col,row]=inter(img[chnl,col:col+wsh[-2],row:row+wsh[-1]])
+                        if co==0 :
+                            Input[ixm,col,row,chnl]=img[chnl,col:col+wsh[-2],row:row+wsh[-1]]
+                            mean[ixm,chnl,col,row]=img[chnl,col:col+wsh[-2],row:row+wsh[-1]].mean()
+            hold[ixm,co]=np.sum(temp,axis=0)
+    if sqrt:
+        hold=np.sqrt(hold)
+    return((hold),mean,Input,temp)
 ###data
 
 
