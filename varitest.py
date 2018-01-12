@@ -10,8 +10,8 @@ v=0
 sizz=1
 
 #current alg, need to compare the mathematical equivalence between the i with and without mul2
-def vecvari(array,W,B=None,sqrt=False,verbose=False,KCD=False,mul2=False,**kwargs):
-    """vecvari10 adds the bias to the "size"
+def vecvari(array,W,B=None,sqrt=False,verbose=False,KCD=False,t=0,**kwargs):
+    """
     params:
         array(array): input data
         W(array): weights
@@ -19,22 +19,24 @@ def vecvari(array,W,B=None,sqrt=False,verbose=False,KCD=False,mul2=False,**kwarg
         sqrt(bool): apply square root to the output
         verbose[0,1,2]: print interim data for diagnosis
         KCD(bool): keep channel data, i.e.: does not sum the channel axis, output is more massive though
-        mul2(bool): multiply the result of (array-mean) rather than (array*W)-mean
+        t[0,1,2]: the 3 version to test for mathematical equivalency
         **kwargs: just a way to prevent error with function changes 
     """
     arrs=array.shape
     ashp=W.shape
     dstp=arrs[0]-1 if not((arrs[0]-1)==0) else 1
     #array=np.expand_dims(array,len(array.shape)//2)
+    print("VECVARI:: B? {},SQRT {}, KCD {},  T {}".format(
+            not(B is None),bool(sqrt),bool(KCD),t))
     if verbose:
-        print("VECVARI10:: B? {},SQRT {}, SIZZ {}, KCD {},  MUL2 {}".format(
-            not(B is None),bool(sqrt),sizz,bool(KCD),bool(mul2)))
+
         print('arrayshape',arrs)
         if verbose==2:
             print('Wsample',W[:,:,-1,-1])
         else:
             print('Wsample',W[:,:,-1,-1])
         if not(B is None):
+            print("Bshape",B.shape)
             print("Bsamp",B)
         print('wshape',ashp)
     xi=(-2,-1)
@@ -44,8 +46,10 @@ def vecvari(array,W,B=None,sqrt=False,verbose=False,KCD=False,mul2=False,**kwarg
             B=np.zeros(ashp[:2],dtype=np.float32)
         else:
             B=np.zeros((1,1,1,1),dtype=np.float32)#channel
-    mul=array*W
+
     size=np.sum(W,axis=xi,keepdims=True)#shape=(outputs, channel)
+
+    mul=array*W
     if verbose:
         if verbose==2:
             print('mulsamp',mul[:,-1,-1,::dstp],'arrsamp',array[-1,-1,:])
@@ -56,7 +60,12 @@ def vecvari(array,W,B=None,sqrt=False,verbose=False,KCD=False,mul2=False,**kwarg
         print("size",size.shape)
         print('array',array.shape,'w',W.shape)
     ######################################
-    mean=np.sum(mul,xi,keepdims=1)/np.broadcast_to([ashp[-2]*ashp[-1]],(3,1,1))
+    if t==1:
+        mean=np.sum(array,xi,keepdims=1)/np.broadcast_to([ashp[-2]*ashp[-1]],(3,1,1))
+    elif t==2:
+        mean=np.sum(mul,xi,keepdims=1)/size
+    else:
+        mean=np.sum(mul,xi,keepdims=1)/np.broadcast_to([ashp[-2]*ashp[-1]],(3,1,1))
     if verbose:
         if verbose==2:
             print("meanshp",mean.shape)
@@ -69,11 +78,11 @@ def vecvari(array,W,B=None,sqrt=False,verbose=False,KCD=False,mul2=False,**kwarg
             print("amean",(mul-mean)[:,:,:,::dstp,-1,-1])
         else:
             print("amean",(mul-mean)[-1,-1,-1])
-    if mul2:
+    if not(t==0):
         mul=((array-mean)*W)
         i=np.square(mul)/size
     else:
-        i=(np.square((mul)-mean))/size
+        i=(np.square(mul-mean))/size
     if KCD:
         out=np.sum(i,axis=xi)
     else:
@@ -102,6 +111,7 @@ def vecvari(array,W,B=None,sqrt=False,verbose=False,KCD=False,mul2=False,**kwarg
         assert out.shape==(arrs[0],ashp[0],arrs[1],arrs[2])
         B=np.reshape(B,(*B.shape,*[1 for _ in range(len(ashp)-len(B.shape))]))
         return(out+B[:,0])
+
     
     
 #backups
