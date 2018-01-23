@@ -1,11 +1,6 @@
-'''
-Created on Jan 15, 2018
 
-@author: ARL
-'''
-
-from AR_NN_util.utils import kerasdatasets
-import AR_NN_util.utils as ARU
+from utils import kerasdatasets
+import utils as ARU
 import numpy as np
 import os
 import tfvar as T
@@ -97,7 +92,7 @@ if K:#func api or sequential
     model.fit(x=tftrain[0],y=tftrain[1],batch_size=batchs,epochs=epochs,validation_data=(tftest[0],tftest[1]))
   
   
-  
+"""  
 if CH:#https://github.com/chainer/chainer/blob/master/examples/mnist/train_mnist.py  
     channel_order="first"
     train=[]
@@ -386,5 +381,5 @@ if CH:#https://github.com/chainer/chainer/blob/master/examples/mnist/train_mnist
         
                 print('val_loss:{:.04f} val_accuracy:{:.04f}'.format(
                     np.mean(test_losses), np.mean(test_accuracies)))
-    
+    """
     
