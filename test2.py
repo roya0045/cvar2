@@ -10,36 +10,9 @@ import numpy as np
 import os
 import tfvar as T
 import keras as k
+import keras.layers as kl
 import functools as ft
 #ARU.layer_interp(nlayers, inpu, method)
-
-layer_sizes=64
-pool_size=2
-window_size=3
-batchs=1#0#10
-epochs=15
-channel_order=["first","last"][1]
-datas=["cloth","numbah"][0]
-#todo keras with tensorflow layer, mxnet gluon, chainer, maybe pure TF and cntk and mxnet symmbolic
-CN,MXG,MXS,TF,CH,K=0,0,0,0,0,0#1,1,0,0,0,1
-train,test=kerasdatasets(4 if datas=="cloth" else 3)#3)# for digits#((x_train, y_train), (x_test, y_test))
-print(test[1][2:10])
-print(test[1].shape)
-outft=0
-arg=[{"num_classes":10},int,float,np.unicode][outft]
-tout=k.utils.to_categorical if outft == 0 else ARU.caster
-tout=ft.partial(tout,**arg) if outft==0 else ft.partial(tout,typ=arg)
-
-tftrain=(np.expand_dims(np.float32(train[0]), 1 if channel_order=="first" else -1),tout(train[1]))
-tftest=(np.expand_dims(np.float32(test[0]), 1 if channel_order=="first" else -1),tout(test[1] ))
-
-fract=0
-if fract:
-    fracto=500
-    x_train=train[0][:(train[0].shape[0]//fracto)]
-    x_test=test[0][:(test[0].shape[0]//fracto)]
-    y_train=train[1][:(train[1].shape[0]//fracto)]
-    y_test=test[1][:(test[1].shape[0]//fracto)]
 
 #heads, may add randvr to add dropout
 a1=['conv','pool']
@@ -55,16 +28,35 @@ b1=['flat','dense']
 b2=['flat','dense','dense']
 b3=['flat','dense','dense','dense']
 
-K,CH=1,0
+layer_sizes=64
+pool_size=2
+window_size=3
+batchs=10#0#10
+epochs=15
+outft=0
+kerdict=a2+b3#a2+b2#nn shape
+proto=0#-Conv of base layer version
+outshp=10
+seq=0
+fracto=0#10
 
-print(train[0][0].shape)
+channel_order=["first","last"][1]
+datas=["cloth","numbah"][0]
+train,test=kerasdatasets(4 if datas=="cloth" else 3)#3)# for digits#((x_train, y_train), (x_test, y_test))
+arg=[{"num_classes":10},int,float,np.unicode][outft]
+
+if fracto:
+    train=(train[0][:(train[0].shape[0]//fracto)],train[1][:(train[1].shape[0]//fracto)])
+    test=(test[0][:(test[0].shape[0]//fracto)],test[1][:(test[1].shape[0]//fracto)])
+
+tftrain=(np.expand_dims(np.float32(train[0]), 1 if channel_order=="first" else -1),tout(train[1]))
+tftest=(np.expand_dims(np.float32(test[0]), 1 if channel_order=="first" else -1),tout(test[1] ))
+tout=k.utils.to_categorical if outft == 0 else ARU.caster
+tout=ft.partial(tout,**arg) if outft==0 else ft.partial(tout,typ=arg)
+
+K,CH=1,0
 if K:#func api or sequential
-    import keras as k
-    import keras.layers as kl
-    outshp=10
-    kerdict=a7+b2#a2+b2
-    seq=0
-    klks={'conv':kl.Convolution2D,'pool':[kl.AveragePooling2D,kl.MaxPool2D][1],'flat':kl.Flatten,'dense':kl.Dense,'drop':kl.Dropout,"proto":T.TFvarLayer}
+    klks={'conv':kl.Convolution2D,'pool':[kl.AveragePooling2D,kl.MaxPool2D][1],'flat':kl.Flatten,'dense':kl.Dense,'drop':kl.Dropout,"proto":[T.TFvarLayer,T.KvarLayer][proto]}
     kwargs={'conv':((layer_sizes,(window_size,window_size)),{"activation":"relu","data_format":"channels_{}".format(channel_order)}),
             'proto':((layer_sizes,(window_size,window_size)),{"activation":"relu","format":"NHWC" if channel_order=="last" else "NCHW"}),
             "pool":((),{"pool_size":(pool_size,pool_size),"data_format":"channels_{}".format(channel_order)}),"dense":((layer_sizes,),{"activation":"relu"}),"flat":((),{}),"drop":((0.25,),{})}
