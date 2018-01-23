@@ -1,14 +1,10 @@
-'''
-Created on Dec 19, 2017
 
-@author: ARL
-'''
 import numpy as np
 import tensorflow as tf
 import keras as K
 from keras.engine.topology import Layer as LYR
 import keras.backend as KB
-import AR_NN_util.utils as ARU
+import utils as ARU
 def get_conv_outsize(size, k, s, p, cover_all=False, d=1):
     "kernel, step, stride,pad,cover, dilation"
     dk = k + (k - 1) * (d - 1)
