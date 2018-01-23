@@ -1,6 +1,11 @@
+'''
+Created on Jan 15, 2018
 
-from utils import kerasdatasets
-import utils as ARU
+@author: ARL
+'''
+
+from AR_NN_util.utils import kerasdatasets
+import AR_NN_util.utils as ARU
 import numpy as np
 import os
 import tfvar as T
@@ -11,7 +16,7 @@ import functools as ft
 layer_sizes=64
 pool_size=2
 window_size=3
-batchs=10#10
+batchs=1#0#10
 epochs=15
 channel_order=["first","last"][1]
 datas=["cloth","numbah"][0]
@@ -44,6 +49,7 @@ a4=['proto','proto']
 a5=['conv','proto']
 a6=['conv','proto','conv','proto']
 a7=['proto','pool','proto','pool']
+a8=['proto','conv','pool','conv']
 #body
 b1=['flat','dense']
 b2=['flat','dense','dense']
@@ -92,7 +98,7 @@ if K:#func api or sequential
     model.fit(x=tftrain[0],y=tftrain[1],batch_size=batchs,epochs=epochs,validation_data=(tftest[0],tftest[1]))
   
   
-"""  
+  
 if CH:#https://github.com/chainer/chainer/blob/master/examples/mnist/train_mnist.py  
     channel_order="first"
     train=[]
@@ -381,5 +387,5 @@ if CH:#https://github.com/chainer/chainer/blob/master/examples/mnist/train_mnist
         
                 print('val_loss:{:.04f} val_accuracy:{:.04f}'.format(
                     np.mean(test_losses), np.mean(test_accuracies)))
-    """
+    
     
