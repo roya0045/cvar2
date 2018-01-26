@@ -1,26 +1,27 @@
-'''
-Created on Jan 15, 2018
 
-@author: ARL
-'''
 
 from AR_NN_util.utils import kerasdatasets
 import AR_NN_util.utils as ARU
 import numpy as np
-import os
+#import os
 import tfvar as T
+import tensorflow.contrib.layers as tcl
 import keras as k
 import keras.layers as kl
+import keras.optimizers as ko
 import functools as ft
 #ARU.layer_interp(nlayers, inpu, method)
 
-#heads, may add randvr to add dropout
-a1=['conv','pool']
-a2=['conv','pool','conv','pool']
+K,CH=1,0#keras and chainer trainer trigger
+
+#heads, may add dropout
+a1=['conv','conv','pool']
+a2=['conv','conv']
 a3=['proto']
 a4=['proto','proto']
 a5=['conv','proto']
 a6=['conv','proto','conv','proto']
+a65=['proto','conv','conv']#,'pool']
 a7=['proto','pool','proto','pool']
 a8=['proto','conv','pool','conv']
 #body
@@ -28,62 +29,139 @@ b1=['flat','dense']
 b2=['flat','dense','dense']
 b3=['flat','dense','dense','dense']
 
-layer_sizes=64
-pool_size=2
-window_size=3
-batchs=10#0#10
-epochs=15
-outft=0
-kerdict=a2+b3#a2+b2#nn shape
-proto=0#-Conv of base layer version
-outshp=10
-seq=0
-fracto=0#10
+#################VALUES THAT CAN BE CHANGED################################
 
+#################STRUCTURE
+
+kerdict=a1+b2
+#layers to use, use 1 from a and one from b
+
+optim=ko.RMSprop(lr=0.001, rho=0.9, epsilon=None, decay=0.0001)#.optimizers.Nadam(lr=0.005, beta_1=0.9, beta_2=0.999, epsilon=None, schedule_decay=0.004)
+#optimizer to use, see keras or tf docs for alternatives
+
+################TRAINING
+
+batchs=23
+#0#10 #size of the batch
+
+epochs=5
+# number of training iterations
+
+################LAYER SETTINGS
+
+layer_sizes=[20,50,100,30,]
+#number of "cells" per layers
+
+window_size=[6,4]
+#window size to use for conv and proto layer
+
+pool_size=2
+# size of the pooling window
+
+act="relu"
+#activation function, see keras or tf docs for more alternatives
+
+################DATA SETTINGS
+
+data=[3,4,1,2][0]# dataset to use, change only the slicer
+#0 = mnist, 1= fashion mnist, 2= cifar 10, 3 = cifar 100 with coarse labels( can be changed)
+
+fracto=0 
+#fraction of the data to use, set to 0 for all data
+
+################MISC
+proto=0#changes the parent class (0:_conv,1: base layer)
+seq=0 #use the sequential model builder instead of the API
+outft=0#used to coerce output data type to match NN output in case
+
+################# END OF VALUES THAT CAN BE CHANGED################################
+
+
+if data==2:
+    outshp=100
+else:
+    outshp=10
 channel_order=["first","last"][1]
-datas=["cloth","numbah"][0]
-train,test=kerasdatasets(4 if datas=="cloth" else 3)#3)# for digits#((x_train, y_train), (x_test, y_test))
-arg=[{"num_classes":10},int,float,np.unicode][outft]
+train,test=kerasdatasets(data)#3)# for digits#((x_train, y_train), (x_test, y_test))
+arg=[{"num_classes":outshp},int,float,np.unicode][outft]
 
 if fracto:
     train=(train[0][:(train[0].shape[0]//fracto)],train[1][:(train[1].shape[0]//fracto)])
     test=(test[0][:(test[0].shape[0]//fracto)],test[1][:(test[1].shape[0]//fracto)])
-
-tftrain=(np.expand_dims(np.float32(train[0]), 1 if channel_order=="first" else -1),tout(train[1]))
-tftest=(np.expand_dims(np.float32(test[0]), 1 if channel_order=="first" else -1),tout(test[1] ))
 tout=k.utils.to_categorical if outft == 0 else ARU.caster
 tout=ft.partial(tout,**arg) if outft==0 else ft.partial(tout,typ=arg)
+tftrain=(np.expand_dims(np.float32(train[0]), 1 if channel_order=="first" else -1),tout(train[1]))
+tftest=(np.expand_dims(np.float32(test[0]), 1 if channel_order=="first" else -1),tout(test[1] ))
 
-K,CH=1,0
+
 if K:#func api or sequential
     klks={'conv':kl.Convolution2D,'pool':[kl.AveragePooling2D,kl.MaxPool2D][1],'flat':kl.Flatten,'dense':kl.Dense,'drop':kl.Dropout,"proto":[T.TFvarLayer,T.KvarLayer][proto]}
-    kwargs={'conv':((layer_sizes,(window_size,window_size)),{"activation":"relu","data_format":"channels_{}".format(channel_order)}),
-            'proto':((layer_sizes,(window_size,window_size)),{"activation":"relu","format":"NHWC" if channel_order=="last" else "NCHW"}),
-            "pool":((),{"pool_size":(pool_size,pool_size),"data_format":"channels_{}".format(channel_order)}),"dense":((layer_sizes,),{"activation":"relu"}),"flat":((),{}),"drop":((0.25,),{})}
+    kwargs={'conv':((layer_sizes,),{"activation":act,"data_format":"channels_{}".format(channel_order),"kernel_initializer":tcl.xavier_initializer_conv2d()}),
+            'proto':((layer_sizes,),{"activation":act,"format":"NHWC" if channel_order=="last" else "NCHW"}),
+            "pool":((),{"pool_size":(pool_size,pool_size),"data_format":"channels_{}".format(channel_order),}),"dense":((layer_sizes,),{"activation":act}),"flat":((),{}),"drop":(0.25,{})}
+    kcw=window_size[-1]
+    lss=layer_sizes[-1]
     if seq:
         model=k.Sequential()
         for ix,I in enumerate(kerdict):#sequential model
+            if (len(kwargs[I][0])>0) and not(I=="drop" or I=="flat" or I=="pool"):
+                try:
+                    sss=(layer_sizes.pop(0),)
+                except:
+                    sss=(lss,)
+            else:
+                sss=kwargs[I][0]
+            if (I=="conv")or(I=='proto'):
+                try:
+                    wand=window_size.pop(0)
+                except:
+                    want=kcw
+                twand=(wand,wand)
             if ix==0:
                 kwargs[I][1]['input_shape']=tftrain[0][0].shape
             if ix==len(kerdict):
                 model.add(klks[I](outshp,activation="softmax"))
             else:
-                model.add(klks[I](*kwargs[I][0],**kwargs[I][1]))
+                if (I=="conv")or(I=='proto'):
+                    model.add(klks[I](*sss,twand,**kwargs[I][1]))
+                else:
+                    model.add(klks[I](*sss,**kwargs[I][1]))
     else:
         kinput=kl.Input(shape=tftrain[0][0].shape,dtype=np.float32)
         KERDICT=dict()
         iv=len(kerdict)
         print(iv)
         for ix,U in enumerate(kerdict):#func api
-            print(ix,ix-iv-1)
+            if (len(kwargs[U][0])>0) and not(U=="drop" or U=="flat"or U=="pool"):
+                try:
+                    sss=(layer_sizes.pop(0),)
+                except:
+                    sss=(lss,)
+            else:
+                sss=kwargs[U][0]
+            if (U=="conv")or(U=='proto'):
+                try:
+                    wand=window_size.pop(0)
+                except:
+                    want=kcw
+                twand=(wand,wand)
+            print(ix,ix-iv-1,U,sss if sss else kwargs[U][0])
             if ix==0:
-                KERDICT[ix-iv]= klks[U](*kwargs[U][0],**kwargs[U][1])(kinput)
+                if (U=="conv")or(U=='proto'):
+                    KERDICT[ix-iv]= klks[U](*sss,twand,**kwargs[U][1])(kinput)
+                else:
+                    KERDICT[ix-iv]= klks[U](*sss,**kwargs[U][1])(kinput)
             elif ix+1==len(kerdict):
                 KERDICT[ix-iv]= klks[U](outshp,activation="softmax")(KERDICT[ix-iv-1])
             else:
-                KERDICT[ix-iv]= klks[U](*kwargs[U][0],**kwargs[U][1])(KERDICT[ix-iv-1])
+                if (U=="conv")or(U=='proto'):
+                    KERDICT[ix-iv]= klks[U](*sss,twand,**kwargs[U][1])(KERDICT[ix-iv-1])
+                else:
+                    KERDICT[ix-iv]= klks[U](*sss,**kwargs[U][1])(KERDICT[ix-iv-1])
         model=k.Model(inputs=kinput,output=KERDICT[-1])
-    model.compile(loss=k.losses.categorical_crossentropy,optimizer="Adam",metrics=['accuracy'])
+    model.compile(loss=k.losses.categorical_crossentropy,
+                  optimizer=optim
+                  ,metrics=['accuracy'])
     k.utils.print_summary(model)
     print(tftrain[0].shape)
     
