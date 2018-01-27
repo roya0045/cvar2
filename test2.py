@@ -93,8 +93,10 @@ tout=ft.partial(tout,**arg) if outft==0 else ft.partial(tout,typ=arg)
 tftrain=(np.expand_dims(np.float32(train[0]), 1 if channel_order=="first" else -1),tout(train[1]))
 tftest=(np.expand_dims(np.float32(test[0]), 1 if channel_order=="first" else -1),tout(test[1] ))
 
-
-if K:#func api or sequential
+def kertrain(*args):
+    kerdict=''
+    for arg in args:
+        kerdict+=arg
     klks={'conv':kl.Convolution2D,'pool':[kl.AveragePooling2D,kl.MaxPool2D][1],'flat':kl.Flatten,'dense':kl.Dense,'drop':kl.Dropout,"proto":[T.TFvarLayer,T.KvarLayer][proto]}
     kwargs={'conv':((layer_sizes,),{"activation":act,"data_format":"channels_{}".format(channel_order),"kernel_initializer":tcl.xavier_initializer_conv2d()}),
             'proto':((layer_sizes,),{"activation":act,"format":"NHWC" if channel_order=="last" else "NCHW"}),
@@ -165,5 +167,13 @@ if K:#func api or sequential
     k.utils.print_summary(model)
     print(tftrain[0].shape)
     
-    model.fit(x=tftrain[0],y=tftrain[1],batch_size=batchs,epochs=epochs,validation_data=(tftest[0],tftest[1]))
- 
+    fitres=model.fit(x=tftrain[0],y=tftrain[1],batch_size=batchs,epochs=epochs,
+              validation_split=0.05,validation_data=(tftest[0],tftest[1]),
+              shuffle=False,verbose=2)
+    if eval:
+        evres=model.evaluate(tftest[0], y=tftest[1], batch_size=batchs, verbose=0,)
+        return(fitres,evres)
+    return(fitres)
+
+if K:
+    kertrain(kerdict)
