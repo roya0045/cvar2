@@ -1,5 +1,3 @@
-
-
 from utils import kerasdatasets
 import utils as ARU
 import numpy as np
@@ -73,7 +71,7 @@ fracto=0
 proto=0#changes the parent class (0:_conv,1: base layer)
 seq=0 #use the sequential model builder instead of the API
 outft=0#used to coerce output data type to match NN output in case
-
+eval=0#perform evaluation step at the end of training
 ################# END OF VALUES THAT CAN BE CHANGED################################
 
 
