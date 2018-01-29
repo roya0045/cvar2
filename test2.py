@@ -175,3 +175,5 @@ def kertrain(*args):
 
 if K:
     histo=kertrain(*kerdict)
+    print(histo.params)
+    print(histo.history)
