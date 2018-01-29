@@ -92,9 +92,9 @@ tftrain=(np.expand_dims(np.float32(train[0]), 1 if channel_order=="first" else -
 tftest=(np.expand_dims(np.float32(test[0]), 1 if channel_order=="first" else -1),tout(test[1] ))
 
 def kertrain(*args):
-    kerdict=''
+    kerdict=list()
     for arg in args:
-        kerdict+=arg
+        kerdict.append(arg)
     klks={'conv':kl.Convolution2D,'pool':[kl.AveragePooling2D,kl.MaxPool2D][1],'flat':kl.Flatten,'dense':kl.Dense,'drop':kl.Dropout,"proto":[T.TFvarLayer,T.KvarLayer][proto]}
     kwargs={'conv':((layer_sizes,),{"activation":act,"data_format":"channels_{}".format(channel_order),"kernel_initializer":tcl.xavier_initializer_conv2d()}),
             'proto':((layer_sizes,),{"activation":act,"format":"NHWC" if channel_order=="last" else "NCHW"}),
@@ -174,4 +174,4 @@ def kertrain(*args):
     return(fitres)
 
 if K:
-    kertrain(kerdict)
+    histo=kertrain(*kerdict)
