@@ -174,6 +174,13 @@ def kertrain(*args):
     return(fitres)
 
 if K:
-    histo=kertrain(*kerdict)
-    print(histo.params)
-    print(histo.history)
+    returned=dict()
+    todo=[kerdict,]
+    #hsto=kertrain(*kerdict)
+    #print(hsto.params)#good
+    #print(hsto.history)#1 value per epoch per metric
+    print(kerdict)
+    for parms in todo:
+        histob=kertrain(*parms)
+        returned[histob.params]=histob.history
+    print(returned)
