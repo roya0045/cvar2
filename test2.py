@@ -1,6 +1,7 @@
 from utils import kerasdatasets
 import utils as ARU
 import numpy as np
+import copy
 import datetime as dt
 import time as ti
 #import os
