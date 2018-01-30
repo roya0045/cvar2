@@ -1,6 +1,8 @@
 from utils import kerasdatasets
 import utils as ARU
 import numpy as np
+import datetime as dt
+import time as ti
 #import os
 import tfvar as T
 import tensorflow.contrib.layers as tcl
@@ -191,6 +193,14 @@ if K:
     #print(hsto.history)#1 value per epoch per metric
     print(kerdict)
     for parms in todo:
-        histob=kertrain(*parms)
-        returned[histob.params]=histob.history
+        if eval:
+            histob,histob2=kertrain(*parms)
+            returned[histob.params]=histob.history
+            returned[histob2.params]=histob2.history
+        else:
+            histob=kertrain(*parms)
+            returned[histob.params]=histob.history
     print(returned)
+    tdt=dt.date.today()
+    with open("protolog_{}{}-{}.txt".format(tdt.year,tdt.timetuple()[-2],ti.ctime().split(" ")[-2].replace(":","-"))) as fl:
+        fl.write(returned)
