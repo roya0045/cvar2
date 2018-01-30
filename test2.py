@@ -163,13 +163,23 @@ def kertrain(*args):
                   optimizer=optim
                   ,metrics=['accuracy'])
     k.utils.print_summary(model)
-    print(tftrain[0].shape)
-    
+    sess=tf.Session()
+    with sess.as_default():
+        sess.run(tf.global_variables_initializer())
+        hardlr=(copy.deepcopy(sess.run(optim.lr))*2)
+    def step_decay(epoch):
+        drop = 0.5
+        epochs_drop = 10.0
+        lrate = hardlr * drop** floor((1+epoch)/epochs_drop)
+        return lrate
+    callbako=[k.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=0, mode='auto', epsilon=0.0001, cooldown=5, min_lr=0),
+              k.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=0, verbose=0, mode='min'),
+              k.callbacks.LearningRateScheduler(step_decay)]
     fitres=model.fit(x=tftrain[0],y=tftrain[1],batch_size=batchs,epochs=epochs,
               validation_split=0.05,validation_data=(tftest[0],tftest[1]),
-              shuffle=False,verbose=2)
+              shuffle=False,verbose=2,callbacks=callbako)
     if eval:
-        evres=model.evaluate(tftest[0], y=tftest[1], batch_size=batchs, verbose=0,)
+        evres=model.evaluate(tftest[0], y=tftest[1], batch_size=batchs, verbose=0,callbacks=callbako)
         return(fitres,evres)
     return(fitres)
 
