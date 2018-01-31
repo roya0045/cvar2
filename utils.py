@@ -1,8 +1,4 @@
-'''
-Created on Oct 24, 2017
 
-@author: ARL
-'''
 import numpy as np
 import pandas as pd
 from math import ceil,floor
