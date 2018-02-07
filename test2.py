@@ -19,6 +19,7 @@ K=1
 #heads, may add dropout
 a1=['conv','conv','pool']
 a2=['conv','conv']
+a25=['conv','conv','conv']
 a3=['proto']
 a4=['proto','proto']
 a5=['conv','proto']
@@ -37,7 +38,7 @@ b4=['flat','dense','dense','dense','dense']
 #################STRUCTURE
 
 kerdict=a1+b2
-todo=[a1+b1,['conv','proto','pool']+b1]
+todo=[a25+b4,a65+b4,]
 #layers to use, use 1 from a and one from b
 
 optim=ko.RMSprop(lr=0.081, rho=0.9, epsilon=None, decay=0.0001)
@@ -49,7 +50,7 @@ optim2=k.optimizers.Nadam(lr=0.99, beta_1=0.9, beta_2=0.999, epsilon=None, sched
 batchs=23
 #0#10 #size of the batch
 
-epochs=2
+epochs=1100
 # number of training iterations
 
 ################LAYER SETTINGS
