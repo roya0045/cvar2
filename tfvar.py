@@ -17,25 +17,6 @@ def get_conv_outsize(size, k, s, p, cover_all=False, d=1):
 #imgtf=tf.convert_to_tensor()
 #tfa=tf.transpose(imgtf, [0,2,3,1])#NWHC hit
 
-class MyLayer(LYR):#K.layers._Conv
-
-    def __init__(self, output_dim, **kwargs):
-        self.output_dim = output_dim
-        super(MyLayer, self).__init__(**kwargs)
-
-    def build(self, input_shape):
-        # Create a trainable weight variable for this layer.
-        self.kernel = self.add_weight(name='kernel', 
-                                      shape=(input_shape[1], self.output_dim),
-                                      initializer='uniform',
-                                      trainable=True)
-        super(MyLayer, self).build(input_shape)  # Be sure to call this somewhere!
-
-    def call(self, x):
-        return KB.dot(x, self.kernel)
-
-    def compute_output_shape(self, input_shape):
-        return (input_shape[0], self.output_dim)
 class TFvarLayer(K.layers.convolutional._Conv): #K.layers.convolutional._Conv):#layers.Layer):
     """
     :param num_c: number of cell in this layer
@@ -245,6 +226,7 @@ class KvarLayer(K.engine.topology.Layer): #K.layers.convolutional._Conv):#layers
 
     def build(self, input_shape):
         print(input_shape)
+        super(KvarLayer, self).build(input_shape)
         #self.arrs=input_shape
         if self.format=='NHWC':
             self.W = self.add_weight(shape=(self.noutputs,self.window[0],self.window[1],input_shape[-1]),#[self.num_c,self.chnl,self.filter[0],self.filter[1]],
