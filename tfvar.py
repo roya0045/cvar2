@@ -56,6 +56,7 @@ class TFvarLayer(K.layers.convolutional._Conv): #K.layers.convolutional._Conv):#
     def tfwindow(self,arr,nc_to_nh=False,pad="VALID",stride=1):
         """
         this functions split the data into array of the proper shape for computation, this is based on the chainer function im2col
+        https://docs.chainer.org/en/stable/reference/generated/chainer.functions.im2col.html
         
         pad can be "SAME",will add 0s to get the same output shape as input
         nc_to_nh: change from "NHWC" to "NCHW"
@@ -219,7 +220,11 @@ class KvarLayer(K.engine.topology.Layer): #K.layers.convolutional._Conv):#layers
         
         #print('modified iimage tnsor',tfa.eval(),'modified iimage tnsor')
     def tfwindow(self,arr,nc_to_nh=False,pad="VALID",stride=1):
-        """pad can be "SAME",will add 0s to get the same output shape as input
+        """
+        this functions split the data into array of the proper shape for computation, this is based on the chainer function im2col
+        https://docs.chainer.org/en/stable/reference/generated/chainer.functions.im2col.html
+        
+        pad can be "SAME",will add 0s to get the same output shape as input
         nc_to_nh: change from "NHWC" to "NCHW"
         stride = stride for the 2 internal axis
         """
