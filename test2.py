@@ -107,7 +107,7 @@ tftrain=(np.expand_dims(np.float32(train[0]), 1 if channel_order=="first" else -
 tftest=(np.expand_dims(np.float32(test[0]), 1 if channel_order=="first" else -1),tout(test[1] ))
 
 
-def kertrain(*args,wd=None,frezimp=False):
+def kertrain(*args,wd=None,frezimp=False,printweight=False):
     kerdict=list()
     for arg in args:
         kerdict.append(arg)
@@ -206,12 +206,18 @@ def kertrain(*args,wd=None,frezimp=False):
     callbako=[k.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=0, mode='auto', epsilon=0.0001, cooldown=5, min_lr=0),
               k.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=0, verbose=0, mode='min'),
               k.callbacks.LearningRateScheduler(step_decay)]
+    if printweight:
+        iniW=model.get_weights()
     fitres=model.fit(x=tftrain[0],y=tftrain[1],batch_size=batchs,epochs=epochs,
               validation_split=0.05,validation_data=(tftest[0],tftest[1]),
               shuffle=False,callbacks=callbako)#,verbose=2,)
     if evalu:
         evres=model.evaluate(tftest[0], y=tftest[1], batch_size=batchs, verbose=0,callbacks=callbako)
         return(fitres,evres)
+    if printweight:
+        postW=model.get_weights()
+        for i,v in enumerate(postW):
+            print(v-iniW[i])
     return(fitres)
 
 
