@@ -19,10 +19,13 @@ def get_conv_outsize(size, k, s, p, cover_all=False, d=1):
 
 class TFvarLayer(K.layers.convolutional._Conv): #K.layers.convolutional._Conv):#layers.Layer):
     """
+    prototype of a variance layer/weighter variance,
+    the concept is similar to convolution but uses weighted variance instead of a simple multiplication
+    
+    :KCD keep channel data, this is a way to not compress all the channel data, uses more mem but might be of use
     :param num_c: number of cell in this layer
     :filter size of the filter/kernel (int or container)
     :stride size of the stride/step (int or container)
-    :bigB use a bias for the kernel(False) or for the whole output(True)
     :padding type of padding to use, todo
     """
     def __init__(self, num_c, filtr,stride=1, #num_routing=3,
@@ -51,7 +54,10 @@ class TFvarLayer(K.layers.convolutional._Conv): #K.layers.convolutional._Conv):#
         
         #print('modified iimage tnsor',tfa.eval(),'modified iimage tnsor')
     def tfwindow(self,arr,nc_to_nh=False,pad="VALID",stride=1):
-        """pad can be "SAME",will add 0s to get the same output shape as input
+        """
+        this functions split the data into array of the proper shape for computation, this is based on the chainer function im2col
+        
+        pad can be "SAME",will add 0s to get the same output shape as input
         nc_to_nh: change from "NHWC" to "NCHW"
         stride = stride for the 2 internal axis
         """
@@ -72,6 +78,9 @@ class TFvarLayer(K.layers.convolutional._Conv): #K.layers.convolutional._Conv):#
                 return(tf.reshape(temp,(-1,*self.convshape,self.ch,*self.window,1)))
 
     def build(self, input_shape):
+        """
+        create the weights and bias for the layer according to the keras docs
+        """
         print(input_shape)
         #self.arrs=input_shape
         if self.format=='NHWC':
@@ -109,7 +118,10 @@ class TFvarLayer(K.layers.convolutional._Conv): #K.layers.convolutional._Conv):#
             self.x2=(-2,-1,-3)
         self.built = True
 
-    def call(self, array, training=None):#you can crunch by doing all channels
+    def call(self, array, training=None):
+        """
+        this is where the magic happens
+        """
         if self.shape is None:
             self.shape=array.shape.as_list()
             print(self.shape,"shape")
@@ -174,10 +186,13 @@ class TFvarLayer(K.layers.convolutional._Conv): #K.layers.convolutional._Conv):#
         
 class KvarLayer(K.engine.topology.Layer): #K.layers.convolutional._Conv):#layers.Layer):
     """
+    prototype of a variance layer/weighter variance,
+    the concept is similar to convolution but uses weighted variance instead of a simple multiplication
+    
+    :KCD keep channel data, this is a way to not compress all the channel data, uses more mem but might be of use
     :param num_c: number of cell in this layer
     :filter size of the filter/kernel (int or container)
     :stride size of the stride/step (int or container)
-    :bigB use a bias for the kernel(False) or for the whole output(True)
     :padding type of padding to use, todo
     """
     def __init__(self, num_c, filtr,stride=1, sqrt=0,V=False,format='NHWC',sizz=0,
@@ -225,6 +240,9 @@ class KvarLayer(K.engine.topology.Layer): #K.layers.convolutional._Conv):#layers
                 return(tf.reshape(temp,(-1,*self.convshape,self.ch,*self.window,1)))
 
     def build(self, input_shape):
+        """
+        create the weights and bias for the layer according to the keras docs
+        """
         print(input_shape)
         super(KvarLayer, self).build(input_shape)
         #self.arrs=input_shape
@@ -263,7 +281,10 @@ class KvarLayer(K.engine.topology.Layer): #K.layers.convolutional._Conv):#layers
             self.x2=(-2,-1,-3)
         self.built = True
 
-    def call(self, array, training=None):#you can crunch by doing all channels
+    def call(self, array, training=None):
+        """
+        this is where the magic happens
+        """
         if self.shape is None:
             self.shape=array.shape.as_list()
             print(self.shape,"shape")
