@@ -6,6 +6,7 @@ import datetime as dt
 import time as ti
 #import os
 import tensorflow as tf
+from math import floor
 import tfvar as T
 import tensorflow.contrib.layers as tcl
 import keras as k
