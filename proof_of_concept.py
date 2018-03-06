@@ -153,7 +153,7 @@ kerdataa=1
 if kerdataa:
     for K in (4,3):
         tr,ts=kerasdatasets(K)
-        for I in range(15):
+        for I in range(9):
             holder.append(tr[0][I])
 for imgpth in ["guit.jpg","meme.jpg",
                "3pan.jpg","croc.jpg","spell.jpg",
