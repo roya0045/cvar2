@@ -162,19 +162,15 @@ for imgpth in ["guit.jpg","meme.jpg",
                "butterfly.jpg",
                ]:
     holder.append(bp+imgpth)
-
-weights=edger([3,3],2,num_edges=None,batch_edges=3,maxpoint=5,mode=1,operator=1,seed=10102,round=4)
+    
+kernel_shape=[3,3]
+weights=edger(kernel_shape,kernel_shape[0]-1,num_edges=None,batch_edges=3,
+              maxpoint=kernel_shape[0]*2-1,mode=2,operator=1,seed=10102,round=4)
 sess=tf.Session()
 onerw=True
-sample=5
+sample=4
 norm=0
-test=[3,5,8,6,7,1,10,12]
-class INFLIST(list):
-    def pop_inf(self,x):
-        if self.__len__()==1:
-            return(self.__getitem__(0))
-        else:
-            return(self.pop(x))
+saveplots=1
 
 datcast=[None,np.uint8,np.float16,np.float32,np.uint16,np.float64][-1]
 recast=[None,np.uint8,np.float16,np.float32,np.uint16][1]
