@@ -148,7 +148,7 @@ def jpg2arr(image_path,imfrmt='CHW'):
 
 FORMAT=['NCHW','NHWC'][1]
 holder=[]
-bp="C:\\Users\\utilisateur\\Pictures\\"
+bp=".\\POC\\"
 kerdataa=1
 if kerdataa:
     for K in (4,3):
