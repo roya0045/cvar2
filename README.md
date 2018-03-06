@@ -11,5 +11,9 @@ File explanations:
   varitest: implementation of the baseline functions and potential functions for chainer
   varplot: currently use to plot the two functions of varitest in order to see how the bias affects the output
   edger: makes kernels for testing
+  proof_of_concept: make plot of images to compare the convolution from imgaug, this method and the convs from scipy and tensorflow
+  
+#Proof of concept
+  demonstrations are in the POC folder
   
 
