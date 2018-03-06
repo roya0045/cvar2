@@ -163,7 +163,7 @@ for imgpth in ["guit.jpg","meme.jpg",
                ]:
     holder.append(bp+imgpth)
 
-weights=edger([3,3],2,num_edges=None,batch_edges=3,maxpoint=5,mode=1,operator=1,seed=10102)
+weights=edger([3,3],2,num_edges=None,batch_edges=3,maxpoint=5,mode=1,operator=1,seed=10102,round=4)
 sess=tf.Session()
 onerw=True
 sample=5
