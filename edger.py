@@ -169,6 +169,7 @@ def edger(shape,minpoints,num_edges=None,batch_edges=None,ranges=[0,2],arrange=[
           2: a different random kernel to each kernel
     operator: 0: add, 1: mul, 2: (x+0.1)*random
     seed=rng seed
+    round: number of decimals to keep
     """
     output=[]
     if maxpoint is None:
