@@ -154,7 +154,7 @@ def scaler(data,ranges,scale=1,dist=None,seed=None,oper=0,center=None):
             data[I]=(data[I]-center)*(ranges[-1]-ranges[0])
     return(data)
 
-def edger(shape,minpoints,num_edges=None,batch_edges=None,ranges=[0,2],arrange=[0,1],dist=0,mode=1,maxpoint=None,operator=1,seed=235464):
+def edger(shape,minpoints,num_edges=None,batch_edges=None,ranges=[0,2],arrange=[0,1],dist=0,mode=1,maxpoint=None,operator=1,seed=235464,round=None):
     """
     shape: shape of kernels
     minpoints: minimal number of non-zeros to have ina kernel
@@ -185,6 +185,8 @@ def edger(shape,minpoints,num_edges=None,batch_edges=None,ranges=[0,2],arrange=[
     for I in range(edges%len(shapes)):
             output.append(shapes[I])
     output=scaler(output,ranges,oper=operator,scale=mode,dist=dist,seed=seed)
+    if round:
+        output=np.round(output, decimals=round)
     return(output)
 """
 def edgmaker(shape,vari):
