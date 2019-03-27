@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.nn import functional as fnn
+from PIL import Image
 
 import numpy as np
 
@@ -45,7 +46,7 @@ class TvarLayer(nn.Module):  # K.layers.convolutional._Conv):#layers.Layer):
     """
 
     def __init__(self, num_c, filtr, stride=1,  # num_routing=3,
-                 sqrt=0, V=False, format='NCHW', sizz=0,
+                 sqrt=0, V=False, format='NCHW', sizz=0,independant_channels=True,squash_ch=False,
                  KCD=False,dilation=1, bigB=False, pad=0, activation="relu",
                  **kwargs):
         super(TvarLayer,self).__init__()
@@ -53,11 +54,12 @@ class TvarLayer(nn.Module):  # K.layers.convolutional._Conv):#layers.Layer):
         self.window = filtr
         self.dilat=dilation
         self.stride = stride
+        self.SCH=squash_ch
         self.sqrt = sqrt
         self.KCD = KCD
         assert (format == "NCHW") #or (format == "NHWC")
         self.format = format
-
+        self.IDC=independant_channels
         self.sizz = sizz
         self.pad = pad
         self.shape = None
@@ -83,9 +85,13 @@ class TvarLayer(nn.Module):  # K.layers.convolutional._Conv):#layers.Layer):
         elif self.format == "NHWC":
             dsize=(1, *self.window, 1)
         temp=fnn.unfold(arr,self.window,dilation=self.dilat,padding=self.pad,stride=self.stride)
-
+        #input(temp.shape)
         #if nc_to_nh and self.format == 'NCHW':
         #return (tf.transpose(tf.reshape(temp, (-1, *self.convshape, 1, self.ch, *self.window)),perm=[0, 1, 2, 3, 6, 4, 5]))
+        if self.IDC:
+            temp=torch.reshape(temp,[-1,self.ch,self.window[0]*self.window[1],temp.shape[-1]])
+        temp=torch.unsqueeze(temp,1)
+        return (temp)
         if self.format == "NCHW":
             return (torch.reshape(temp, (-1, *self.convshape, 1, self.ch, *self.window)))
         elif self.format == "NHWC":
@@ -98,31 +104,49 @@ class TvarLayer(nn.Module):  # K.layers.convolutional._Conv):#layers.Layer):
 
         # self.arrs=input_shape
         if self.format == 'NHWC':
-            self.W = nn.Parameter(torch.randn((self.noutputs, self.window[0], self.window[1], input_shape[-1]),dtype=torch.double))
-            self.ashp = (self.noutputs, self.window[0], self.window[1], input_shape[-1])
+            self.ch=input_shape[-1]
+            if self.IDC:
+                if self.SCH:
+                    self.W = nn.Parameter(
+                        torch.randn((self.noutputs, self.window[0] * self.window[1]* self.ch,1), dtype=torch.double))
+                else:
+                    self.W = nn.Parameter(
+                    torch.randn((self.noutputs, self.window[0] * self.window[1], self.ch,1), dtype=torch.double))
+            else:
+                self.W = nn.Parameter(torch.randn((self.noutputs, self.window[0]* self.window[1],1),dtype=torch.double))
+            self.ashp = (self.noutputs, self.window[0]* self.window[1], input_shape[-1])
         elif self.format == 'NCHW':
-            self.W = nn.Parameter(torch.randn((self.noutputs, input_shape[1], self.window[0], self.window[1]),dtype=torch.double))
-            self.ashp = (self.noutputs, input_shape[1], self.window[0], self.window[1])
-        if self.KCD == 1:
-            self.B = nn.Parameter(torch.randn((self.noutputs, 1),dtype=torch.double))
-        elif self.KCD == 2:
-            self.B = nn.Parameter(torch.randn((self.noutputs, self.ch),dtype=torch.double))
+            self.ch=input_shape[1]
+            if self.IDC:
+                if self.SCH:
+                    self.W = nn.Parameter(
+                    torch.randn((self.noutputs, self.ch * self.window[0] * self.window[1],1), dtype=torch.double))
+                else:
+                    self.W = nn.Parameter(
+                        torch.randn((self.noutputs, self.ch, self.window[0] * self.window[1],1), dtype=torch.double))
+            else:
+                self.W = nn.Parameter(torch.randn((self.noutputs, self.window[0] * self.window[1],1),dtype=torch.double))
+            self.ashp = (self.noutputs, input_shape[1], self.window[0]* self.window[1])
+        if self.SCH:
+            self.B = nn.Parameter(torch.randn((self.noutputs * self.ch,1),dtype=torch.double))
+        elif self.IDC:
+            self.B = nn.Parameter(torch.randn((self.noutputs, self.ch,1),dtype=torch.double))
         else:
-            self.B = nn.Parameter(torch.randn((self.noutputs,),dtype=torch.double))
+            self.B = nn.Parameter(torch.randn((self.noutputs,1),dtype=torch.double))
 
         twv =list(self.W.shape)
         if self.format == 'NHWC':
             # W=tf.transpose(W, [0,2,3,1])
             self.sb = (1, 1, self.W.shape[-1])
             self.WV = twv[1:3]
-            self.ch = twv[-1]
+            self.ouch = twv[-1]
             self.xi = (-3, -2)
             self.x2 = (-1, -3, -2)
         elif self.format == 'NCHW':
 
             self.sb = (self.W.shape[1], 1, 1)
             self.WV = twv[-2:]
-            self.ch = twv[1]
+            self.ouch = twv[1]
             self.xi = (-2, -1)
             self.x2 = (-2, -1, -3)
         self.built = True
@@ -135,20 +159,22 @@ class TvarLayer(nn.Module):  # K.layers.convolutional._Conv):#layers.Layer):
             self.build(array.shape)
         if self.convshape is None:
             self.convshape=convshape(array.shape,self.window,s=self.stride,p=self.pad,d=self.dilat)
-
+        print('convshape',self.convshape)
         reshaped = self.tfwindow(array)
         if (self.arrs is None):
             self.arrs = list(reshaped.shape)
             print('arss', self.arrs)
-        print(self.xi)
+        print(self.xi,self.W.shape)
         mul = (reshaped * self.W)
         size = torch.sum(self.W, self.xi,keepdim=True)# keepdims=True)  # shape=(outputs, channel)
         mean=torch.mean(mul,self.xi,keepdim=True)
         i = (torch.pow((mul - mean),2)) / size
+        print(i.shape)
         if self.KCD:
             out = torch.sum(i, self.xi)
         else:
             out = torch.sum(i, self.x2)
+        print(out.shape)
         if self.sqrt:
             out = torch.sqrt(out)
         if not (self.B is None):
@@ -179,9 +205,18 @@ class TvarLayer(nn.Module):  # K.layers.convolutional._Conv):#layers.Layer):
         # return tuple([None, self.num_c,self.chnl, self.dim_vector,self.num_c])
 
 if __name__=='__main__':
-    img=np.random.rand(3,3,35,35)
+    display=True
+    img=np.random.rand(3,3,8,8)
+    if display:
+        image=Image.fromarray(img[0],'RGB')
+        image.save('input_img.png')
+        image.show()
     samp_data=torch.from_numpy(img)
     layer=TvarLayer(12,[3,3])
     out=layer.forward(samp_data)
-    
-    print(out)
+    #input(out.shape)
+    if display:
+        image=Image.fromarray(out[0].detach().numpy(),'RGB')
+        image.save('output_img.png')
+        image.show()
+    print(out,out.shape)
