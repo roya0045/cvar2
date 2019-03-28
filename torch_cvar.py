@@ -2,6 +2,9 @@ import torch
 from torch import nn
 from torch.nn import functional as fnn
 from PIL import Image
+from os.path import exists
+from torchvision import transforms as imt
+
 
 import numpy as np
 
@@ -67,6 +70,7 @@ class TvarLayer(nn.Module):  # K.layers.convolutional._Conv):#layers.Layer):
         self.ashp = None
         self.convshape=None
         self.built=False
+        self.L=False
         # print('modified iimage tnsor',tfa.eval(),'modified iimage tnsor')
 
     def tfwindow(self, arr, nc_to_nh=False, pad="VALID", stride=1):
@@ -91,49 +95,48 @@ class TvarLayer(nn.Module):  # K.layers.convolutional._Conv):#layers.Layer):
         if self.IDC:
             temp=torch.reshape(temp,[-1,self.ch,self.window[0]*self.window[1],temp.shape[-1]])
         temp=torch.unsqueeze(temp,1)
+        if not self.L:
+            self.L=temp.shape[-1]
         return (temp)
-        if self.format == "NCHW":
-            return (torch.reshape(temp, (-1, *self.convshape, 1, self.ch, *self.window)))
-        elif self.format == "NHWC":
-            return (torch.reshape(temp, (-1, *self.convshape, self.ch, *self.window, 1)))
 
-    def build(self, input_shape):
+    def build(self, input_shape,dtype=torch.double):
         """
         create the weights and bias for the layer according to the keras docs
         """
-
+        self.batchsize=input_shape[0]
         # self.arrs=input_shape
         if self.format == 'NHWC':
             self.ch=input_shape[-1]
             if self.IDC:
                 if self.SCH:
                     self.W = nn.Parameter(
-                        torch.randn((self.noutputs, self.window[0] * self.window[1]* self.ch,1), dtype=torch.double))
+                        torch.randn((self.noutputs, self.window[0] * self.window[1]* self.ch,1), dtype=dtype))
                 else:
                     self.W = nn.Parameter(
-                    torch.randn((self.noutputs, self.window[0] * self.window[1], self.ch,1), dtype=torch.double))
+                    torch.randn((self.noutputs, self.window[0] * self.window[1], self.ch,1), dtype=dtype))
             else:
-                self.W = nn.Parameter(torch.randn((self.noutputs, self.window[0]* self.window[1],1),dtype=torch.double))
+                self.W = nn.Parameter(torch.randn((self.noutputs, self.window[0]* self.window[1],1),dtype=dtype))
             self.ashp = (self.noutputs, self.window[0]* self.window[1], input_shape[-1])
         elif self.format == 'NCHW':
             self.ch=input_shape[1]
             if self.IDC:
                 if self.SCH:
                     self.W = nn.Parameter(
-                    torch.randn((self.noutputs, self.ch * self.window[0] * self.window[1],1), dtype=torch.double))
+                    torch.randn((self.noutputs, self.ch * self.window[0] * self.window[1],1), dtype=dtype))
                 else:
                     self.W = nn.Parameter(
-                        torch.randn((self.noutputs, self.ch, self.window[0] * self.window[1],1), dtype=torch.double))
+                        torch.randn((self.noutputs, self.ch, self.window[0] * self.window[1],1), dtype=dtype))
             else:
-                self.W = nn.Parameter(torch.randn((self.noutputs, self.window[0] * self.window[1],1),dtype=torch.double))
+                self.W = nn.Parameter(torch.randn((self.noutputs, self.window[0] * self.window[1],1),dtype=dtype))
             self.ashp = (self.noutputs, input_shape[1], self.window[0]* self.window[1])
         if self.SCH:
-            self.B = nn.Parameter(torch.randn((self.noutputs * self.ch,1),dtype=torch.double))
+            self.B = nn.Parameter(torch.randn((self.noutputs * self.ch,1,1),dtype=dtype))
         elif self.IDC:
-            self.B = nn.Parameter(torch.randn((self.noutputs, self.ch,1),dtype=torch.double))
+            self.B = nn.Parameter(torch.randn((self.noutputs, self.ch,1,1),dtype=dtype))
         else:
-            self.B = nn.Parameter(torch.randn((self.noutputs,1),dtype=torch.double))
-
+            self.B = nn.Parameter(torch.randn((self.noutputs,1,1),dtype=dtype))
+        self.convshape = convshape(input_shape[-2:], self.window, s=self.stride, p=self.pad, d=self.dilat)
+        self.prodconv=np.product(self.convshape)
         twv =list(self.W.shape)
         if self.format == 'NHWC':
             # W=tf.transpose(W, [0,2,3,1])
@@ -142,13 +145,15 @@ class TvarLayer(nn.Module):  # K.layers.convolutional._Conv):#layers.Layer):
             self.ouch = twv[-1]
             self.xi = (-3, -2)
             self.x2 = (-1, -3, -2)
+            self.x3=(-1,-3)
         elif self.format == 'NCHW':
-
             self.sb = (self.W.shape[1], 1, 1)
             self.WV = twv[-2:]
             self.ouch = twv[1]
-            self.xi = (-2, -1)
-            self.x2 = (-2, -1, -3)
+            self.xi =  -2
+            self.x2 = (-3, -2,)
+            self.x3=(-2,-1)
+
         self.built = True
 
     def forward(self, array, training=None):
@@ -156,9 +161,7 @@ class TvarLayer(nn.Module):  # K.layers.convolutional._Conv):#layers.Layer):
         this is where the magic happens
         """
         if not(self.built):
-            self.build(array.shape)
-        if self.convshape is None:
-            self.convshape=convshape(array.shape,self.window,s=self.stride,p=self.pad,d=self.dilat)
+            self.build(array.shape,dtype=array.dtype)
         print('convshape',self.convshape)
         reshaped = self.tfwindow(array)
         if (self.arrs is None):
@@ -166,23 +169,36 @@ class TvarLayer(nn.Module):  # K.layers.convolutional._Conv):#layers.Layer):
             print('arss', self.arrs)
         print(self.xi,self.W.shape)
         mul = (reshaped * self.W)
+        print(mul.shape,'mul')
         size = torch.sum(self.W, self.xi,keepdim=True)# keepdims=True)  # shape=(outputs, channel)
+        print(size.shape,'size')
         mean=torch.mean(mul,self.xi,keepdim=True)
+        print(mean.shape,'mean')
         i = (torch.pow((mul - mean),2)) / size
-        print(i.shape)
-        if self.KCD:
-            out = torch.sum(i, self.xi)
-        else:
-            out = torch.sum(i, self.x2)
-        print(out.shape)
+        print(i.shape,'premsum i',self.B.shape)
+        if not (self.B is None):
+            i = i + self.B
+        #out = torch.reshape(i, (*i.shape[:2], -1))
+        out = torch.reshape(i, (self.batchsize, -1,self.prodconv,))
+        #i=torch.sum(i,2)
+
+        print(i.shape,'i')
+
+        #out = torch.sum(out, self.xi ir self.KCD else self.x2 ,keepdim=True)
+
+        print(out.shape,'summed')
         if self.sqrt:
             out = torch.sqrt(out)
-        if not (self.B is None):
-            out = out + self.B
+
+        print('convshape',self.convshape,out.shape)
+        folder = fnn.fold(out,output_size=self.convshape, kernel_size=self.window,padding=[1,1])
+        print(folder.shape,'folded')
+        #TODO
+
+
 
         # print(out.shape,self.format,(self.arrs[0],self.arrs[1],self.arrs[2],self.ashp[0]))
         print(out.shape, self.format, (self.arrs[1], self.arrs[2], self.ashp[0]))
-        print(out.shape)
         return(out)
         '''
         if self.format == "NCHW":
@@ -205,18 +221,32 @@ class TvarLayer(nn.Module):  # K.layers.convolutional._Conv):#layers.Layer):
         # return tuple([None, self.num_c,self.chnl, self.dim_vector,self.num_c])
 
 if __name__=='__main__':
-    display=True
-    img=np.random.rand(3,3,8,8)
+    display=False
+    use_img=False
+    img_path=r"C:\Users\ROYA2\Desktop\Capture.PNG"
+
+    if exists(img_path) and use_img:
+        image = Image.open(img_path)
+        if display:
+            image.save('input_img.png')
+            image.show()
+
+        img=imt.ToTensor()(image)
+        input(img.shape)
+        samp_data=torch.unsqueeze(img,0)
+    else:
+        img=np.random.rand(3,5,45,45)
+        samp_data = torch.from_numpy(img)
     if display:
-        image=Image.fromarray(img[0],'RGB')
+        image=imt.ToPILImage()(img)
         image.save('input_img.png')
         image.show()
-    samp_data=torch.from_numpy(img)
-    layer=TvarLayer(12,[3,3])
+
+    layer=TvarLayer(14,[3,3])
     out=layer.forward(samp_data)
     #input(out.shape)
     if display:
-        image=Image.fromarray(out[0].detach().numpy(),'RGB')
+        image=imt.ToPILImage()(out[0])
         image.save('output_img.png')
         image.show()
     print(out,out.shape)
