@@ -137,6 +137,8 @@ class TvarLayer(nn.Module):  # K.layers.convolutional._Conv):#layers.Layer):
             self.B = nn.Parameter(torch.randn((self.noutputs,1,1),dtype=dtype))
         self.convshape = convshape(input_shape[-2:], self.window, s=self.stride, p=self.pad, d=self.dilat)
         self.prodconv=np.product(self.convshape)
+        super(TvarLayer, self).register_parameter("W", self.W)
+        super(TvarLayer, self).register_parameter("B", self.B)
         twv =list(self.W.shape)
         if self.format == 'NHWC':
             # W=tf.transpose(W, [0,2,3,1])
