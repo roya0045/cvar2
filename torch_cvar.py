@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.nn import functional as fnn
+from torch.nn import init as finit
 from PIL import Image
 from os.path import exists
 from torchvision import transforms as imt
@@ -109,32 +110,34 @@ class TvarLayer(nn.Module):  # K.layers.convolutional._Conv):#layers.Layer):
             self.ch=input_shape[-1]
             if self.IDC:
                 if self.SCH:
-                    self.W = nn.Parameter(
-                        torch.randn((self.noutputs, self.window[0] * self.window[1]* self.ch,1), dtype=dtype))
+                    w=torch.empty(self.noutputs, self.window[0] * self.window[1]* self.ch,1)
                 else:
-                    self.W = nn.Parameter(
-                    torch.randn((self.noutputs, self.window[0] * self.window[1], self.ch,1), dtype=dtype))
+                    w = torch.empty(self.noutputs, self.window[0] * self.window[1], self.ch,1)
             else:
-                self.W = nn.Parameter(torch.randn((self.noutputs, self.window[0]* self.window[1],1),dtype=dtype))
+                w = torch.empty(self.noutputs, self.window[0]* self.window[1],1)
+            finit.kaiming_normal(w)
+            self.W = nn.Parameter(w, dtype=dtype))
             self.ashp = (self.noutputs, self.window[0]* self.window[1], input_shape[-1])
         elif self.format == 'NCHW':
             self.ch=input_shape[1]
             if self.IDC:
                 if self.SCH:
-                    self.W = nn.Parameter(
-                    torch.randn((self.noutputs, self.ch * self.window[0] * self.window[1],1), dtype=dtype))
+                    w = torch.empty(self.noutputs, self.ch * self.window[0] * self.window[1],1)
                 else:
-                    self.W = nn.Parameter(
-                        torch.randn((self.noutputs, self.ch, self.window[0] * self.window[1],1), dtype=dtype))
+                    w = toch.empty(self.noutputs, self.ch, self.window[0] * self.window[1],1)
             else:
-                self.W = nn.Parameter(torch.randn((self.noutputs, self.window[0] * self.window[1],1),dtype=dtype))
+                w = torch.empty(self.noutputs, self.window[0] * self.window[1],1)
+            finit.kaiming_normal(w)
+            self.W = nn.Parameter(w, dtype=dtype))
             self.ashp = (self.noutputs, input_shape[1], self.window[0]* self.window[1])
         if self.SCH:
-            self.B = nn.Parameter(torch.randn((self.noutputs * self.ch,1,1),dtype=dtype))
+            b = torch.empty((self.noutputs * self.ch,1,1)
         elif self.IDC:
-            self.B = nn.Parameter(torch.randn((self.noutputs, self.ch,1,1),dtype=dtype))
+            b = torch.empty(self.noutputs, self.ch,1,1)
         else:
-            self.B = nn.Parameter(torch.randn((self.noutputs,1,1),dtype=dtype))
+            b = torch.empty(self.noutputs,1,1)
+        finit.kaiming_normal(b)
+        self.B = torch.Parameter( b , dtype=dtype)
         self.convshape = convshape(input_shape[-2:], self.window, s=self.stride, p=self.pad, d=self.dilat)
         self.prodconv=np.product(self.convshape)
         super(TvarLayer, self).register_parameter("W", self.W)
