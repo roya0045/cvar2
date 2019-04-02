@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torch.nn import functional as fnn
 from torch.nn import init as finit
-from torch.optim import Adam
+from torch.optim import SGD
 from PIL import Image
 from os.path import exists
 from torchvision import transforms as imt
@@ -261,15 +261,16 @@ if __name__ == '__main__':
         image.show()
     print(out, out.shape)
 
-    module = TvarLayer(8, [4, 4],samp_data.shape)
+    module = TvarLayer(8, [3,3],samp_data.shape)
     net = module.to('cpu')
     loss = nn.SmoothL1Loss()
-    optim = Adam(net.parameters(), lr=0.2, betas=(0.5, 0.999))
-    corrections = torch.ones(8,*layer.convshape)
+    optim = SGD(net.parameters(), lr=0.2,)
+
     OGW = list()
     for param in net.parameters():
         OGW.append(param)
     output = net(samp_data)
+    corrections = torch.randn(output.shape,dtype=torch.double)
     net.zero_grad()
     outloss = loss(output, corrections)
     outloss.backward()
@@ -280,4 +281,5 @@ if __name__ == '__main__':
     diff = list()
     for i, v in enumerate(OPW):
         diff.append(v - OGW[i])
+    print(OPW)
     print(diff)
